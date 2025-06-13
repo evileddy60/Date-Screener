@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -84,7 +85,7 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="font-body text-foreground/80">I am a...</Label>
+              <Label className="font-body text-foreground/80">I am...</Label>
               <RadioGroup
                 value={role}
                 onValueChange={(value: string) => setRole(value as UserRole)}
@@ -92,11 +93,11 @@ export default function SignupPage() {
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value={USER_ROLES.SINGLE} id="role-single" />
-                  <Label htmlFor="role-single" className="font-normal">Single (Looking for matches)</Label>
+                  <Label htmlFor="role-single" className="font-normal">I am single and looking to be matched up</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value={USER_ROLES.RECOMMENDER} id="role-recommender" />
-                  <Label htmlFor="role-recommender" className="font-normal">Recommender (Helping others)</Label>
+                  <Label htmlFor="role-recommender" className="font-normal">I am looking to match people up</Label>
                 </div>
               </RadioGroup>
             </div>
