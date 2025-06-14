@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Info, Edit, SearchHeart, CalendarDays, AtSign } from 'lucide-react';
+import { User, Info, Edit, Search, CalendarDays, AtSign } from 'lucide-react'; // Changed SearchHeart to Search
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation'; // Added for navigation
 
@@ -79,7 +79,7 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch }: Profile
             </Button>
         </div>
         <Button onClick={handleFindMatchClick} size="sm" variant="default" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow hover:shadow-md transition-all">
-          <SearchHeart className="mr-2 h-4 w-4" /> Find Match for {profileCard.friendName}
+          <Search className="mr-2 h-4 w-4" /> Find Match for {profileCard.friendName}
         </Button>
       </CardFooter>
     </Card>
