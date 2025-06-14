@@ -6,12 +6,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { ProfileCard } from '@/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as ShadDialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Save, UserPlus, X, Edit } from 'lucide-react';
@@ -134,9 +134,9 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
             {profileCard ? <Edit className="w-7 h-7" /> : <UserPlus className="w-7 h-7" />}
             {profileCard ? `Edit ${profileCard.friendName}'s Profile Card` : 'Create New Profile Card'}
           </DialogTitle>
-          <DialogDescription className="font-body">
+          <ShadDialogDescription className="font-body">
             Fill in the details for your single friend. This information will be used to find potential matches.
-          </DialogDescription>
+          </ShadDialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-4 pr-2">
