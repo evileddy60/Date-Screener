@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -6,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Image from 'next/image';
-import { Sparkles, Users, HeartHandshake } from 'lucide-react';
+import { Sparkles, Users, HeartHandshake, BookUser } from 'lucide-react';
 
 export default function HomePage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -26,7 +27,6 @@ export default function HomePage() {
      return <div className="flex justify-center items-center min-h-screen"><Sparkles className="h-12 w-12 animate-ping text-primary" /> <p className="ml-2">Redirecting to dashboard...</p></div>;
   }
 
-
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-background to-secondary/30 p-6">
       <header className="text-center mb-12">
@@ -37,42 +37,42 @@ export default function HomePage() {
           Welcome to Date Screener
         </h1>
         <p className="font-body text-xl text-foreground/80 max-w-2xl mx-auto">
-          Find meaningful connections with a little help from your friends and family. Let your loved ones guide you to your perfect match.
+          Become a matchmaker for your friends! Create profiles for them and help them find meaningful connections.
         </p>
       </header>
 
       <div className="grid md:grid-cols-3 gap-8 mb-12 max-w-4xl w-full">
         <div className="bg-card p-6 rounded-xl shadow-lg hover:shadow-primary/20 transition-shadow duration-300">
-          <Users className="h-12 w-12 text-primary mb-4" />
-          <h2 className="font-headline text-2xl font-semibold text-foreground mb-2">For Singles</h2>
-          <p className="font-body text-foreground/70">Create your profile and let your trusted circle introduce you to potential matches they know you'll love.</p>
+          <BookUser className="h-12 w-12 text-primary mb-4" />
+          <h2 className="font-headline text-2xl font-semibold text-foreground mb-2">Create Profile Cards</h2>
+          <p className="font-body text-foreground/70">Build detailed profiles for your single friends, highlighting their personality and preferences.</p>
         </div>
         <div className="bg-card p-6 rounded-xl shadow-lg hover:shadow-primary/20 transition-shadow duration-300">
           <HeartHandshake className="h-12 w-12 text-primary mb-4" />
-          <h2 className="font-headline text-2xl font-semibold text-foreground mb-2">For Recommenders</h2>
-          <p className="font-body text-foreground/70">Help your friends or family find happiness. Suggest matches and share your insights.</p>
+          <h2 className="font-headline text-2xl font-semibold text-foreground mb-2">Discover Matches</h2>
+          <p className="font-body text-foreground/70">Our AI helps you compare Profile Cards to find promising matches between your friends and friends of other matchmakers.</p>
         </div>
         <div className="bg-card p-6 rounded-xl shadow-lg hover:shadow-primary/20 transition-shadow duration-300">
-          <Sparkles className="h-12 w-12 text-primary mb-4" />
-          <h2 className="font-headline text-2xl font-semibold text-foreground mb-2">AI-Powered Tips</h2>
-          <p className="font-body text-foreground/70">Get smart suggestions to improve match recommendations, making the process smoother and more effective.</p>
+          <Users className="h-12 w-12 text-primary mb-4" />
+          <h2 className="font-headline text-2xl font-semibold text-foreground mb-2">Collaborate & Connect</h2>
+          <p className="font-body text-foreground/70">Approve matches with other matchmakers, and if everyone agrees, help your friends connect!</p>
         </div>
       </div>
       
       <div className="flex space-x-4">
         <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-          <Link href="/auth/login">Login</Link>
+          <Link href="/auth/login">Login as Matchmaker</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="border-primary text-primary hover:bg-primary/10 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-          <Link href="/auth/signup">Sign Up</Link>
+          <Link href="/auth/signup">Become a Matchmaker</Link>
         </Button>
       </div>
 
       <div className="mt-16 w-full max-w-4xl">
          <Image 
-            src="https://placehold.co/1200x400/FF7F50/FAEBD7?text=Meet+Meaningful+Connections" 
-            alt="Diverse group of people connecting"
-            data-ai-hint="people connection"
+            src="https://placehold.co/1200x400/FFACD/FAEBD7?text=Be+Your+Friend%27s+Best+Wingperson" 
+            alt="Illustration of friends connecting through a matchmaker"
+            data-ai-hint="friends connection matchmaking"
             width={1200}
             height={400}
             className="rounded-xl shadow-2xl object-cover"
@@ -80,7 +80,7 @@ export default function HomePage() {
       </div>
 
       <footer className="mt-16 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} Date Screener. Crafted with care for real connections.
+        © {new Date().getFullYear()} Date Screener. Empowering friends to make connections.
       </footer>
     </div>
   );

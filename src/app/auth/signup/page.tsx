@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { UserRole } from '@/types';
 import { USER_ROLES } from '@/lib/constants';
@@ -17,8 +16,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState(''); // Not used in mock auth
-  const [role, setRole] = useState<UserRole>(USER_ROLES.SINGLE);
-  const { login } = useAuth(); // Using login for mock signup, it creates user if not exists
+  const { login } = useAuth(); 
   const [error, setError] = useState('');
 
 
@@ -29,10 +27,8 @@ export default function SignupPage() {
       setError('Please fill in all fields.');
       return;
     }
-    // In mock, login function handles user creation if not found.
-    // We pass the role to guide user creation in the mock AuthContext.
-    // A real signup would send this data to a backend API.
-    login(email, role); 
+    // All signups are for Matchers (Recommenders)
+    login(email, USER_ROLES.RECOMMENDER); 
   };
 
   return (
@@ -43,8 +39,8 @@ export default function SignupPage() {
       </Link>
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <CardTitle className="font-headline text-3xl text-primary">Create Account</CardTitle>
-          <CardDescription className="font-body">Join our community to find or recommend matches.</CardDescription>
+          <CardTitle className="font-headline text-3xl text-primary">Create Your Matchmaker Account</CardTitle>
+          <CardDescription className="font-body">Join our community to help your friends find their perfect match.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -84,26 +80,9 @@ export default function SignupPage() {
                 className="font-body bg-card"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="font-body text-foreground/80">I am...</Label>
-              <RadioGroup
-                value={role}
-                onValueChange={(value: string) => setRole(value as UserRole)}
-                className="flex space-x-4 font-body"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value={USER_ROLES.SINGLE} id="role-single" />
-                  <Label htmlFor="role-single" className="font-normal">I am single and looking to be matched up</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value={USER_ROLES.RECOMMENDER} id="role-recommender" />
-                  <Label htmlFor="role-recommender" className="font-normal">I am looking to match people up</Label>
-                </div>
-              </RadioGroup>
-            </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body text-lg py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-              <UserPlus className="mr-2 h-5 w-5" /> Sign Up
+              <UserPlus className="mr-2 h-5 w-5" /> Sign Up as a Matchmaker
             </Button>
           </form>
         </CardContent>

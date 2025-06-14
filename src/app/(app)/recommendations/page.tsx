@@ -1,81 +1,101 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockUserProfiles, mockRecommendations } from '@/lib/mockData';
-import type { UserProfile, Recommendation } from '@/types';
-import { UserSearchCard } from '@/components/recommendations/UserSearchCard';
-import { RecommendModal } from '@/components/recommendations/RecommendModal';
-import { Input } from '@/components/ui/input';
-import { Loader2, Search, UserX } from 'lucide-react';
+import { mockProfileCards } from '@/lib/mockData'; // Using new ProfileCard mock data
+import type { ProfileCard as ProfileCardType } from '@/types';
+import { Button } from '@/components/ui/button';
+import { ProfileCardDisplay } from '@/components/profile-cards/ProfileCardDisplay';
+import { CreateEditProfileCardModal } from '@/components/profile-cards/CreateEditProfileCardModal';
+import { Loader2, PlusCircle, UserX, BookOpen } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
+import { USER_ROLES } from '@/lib/constants';
 
-export default function RecommendationsPage() {
+export default function ProfileCardsPage() {
   const { currentUser, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUserToRecommendFor, setSelectedUserToRecommendFor] = useState<UserProfile | null>(null);
+  const [myProfileCards, setMyProfileCards] = useState<ProfileCardType[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [recommendationsMade, setRecommendationsMade] = useState<Recommendation[]>(mockRecommendations);
+  const [editingProfileCard, setEditingProfileCard] = useState<ProfileCardType | null>(null);
 
   useEffect(() => {
     if (!authLoading && currentUser) {
-        if (currentUser.role !== 'recommender') {
-            router.push('/dashboard');
-            return;
-        }
-      // Simulate fetching all users except the current recommender
-      const users = mockUserProfiles.filter(user => user.id !== currentUser.id && user.role === 'single');
-      setAllUsers(users);
-      setFilteredUsers(users);
+      if (currentUser.role !== USER_ROLES.RECOMMENDER) {
+        router.push('/dashboard');
+        return;
+      }
+      // Simulate fetching profile cards created by the current matcher
+      const cards = mockProfileCards.filter(card => card.createdByMatcherId === currentUser.id);
+      setMyProfileCards(cards);
+      setIsLoadingData(false);
     } else if (!authLoading && !currentUser) {
-        router.push('/auth/login');
+      router.push('/auth/login');
     }
   }, [currentUser, authLoading, router]);
 
-  useEffect(() => {
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    const filtered = allUsers.filter(user =>
-      user.name.toLowerCase().includes(lowerSearchTerm) ||
-      user.email.toLowerCase().includes(lowerSearchTerm) ||
-      user.bio?.toLowerCase().includes(lowerSearchTerm)
-    );
-    setFilteredUsers(filtered);
-  }, [searchTerm, allUsers]);
+  const handleOpenCreateModal = () => {
+    setEditingProfileCard(null);
+    setIsModalOpen(true);
+  };
 
-  const handleOpenRecommendModal = (user: UserProfile) => {
-    setSelectedUserToRecommendFor(user);
+  const handleOpenEditModal = (profileCard: ProfileCardType) => {
+    setEditingProfileCard(profileCard);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setSelectedUserToRecommendFor(null);
+    setEditingProfileCard(null);
   };
   
-  const handleNewRecommendation = (newRec: Recommendation) => {
-    setRecommendationsMade(prev => [...prev, newRec]);
-    // Optionally, refresh list or provide other UI updates
+  const handleProfileCardSaved = (savedCard: ProfileCardType) => {
+    // Update local state: replace if editing, add if new
+    setMyProfileCards(prevCards => {
+      const cardIndex = prevCards.findIndex(c => c.id === savedCard.id);
+      if (cardIndex !== -1) {
+        const updatedCards = [...prevCards];
+        updatedCards[cardIndex] = savedCard;
+        return updatedCards;
+      }
+      return [...prevCards, savedCard];
+    });
+    // Also update mockProfileCards for persistence during session
+    const mockIndex = mockProfileCards.findIndex(c => c.id === savedCard.id);
+    if (mockIndex !== -1) {
+        mockProfileCards[mockIndex] = savedCard;
+    } else {
+        mockProfileCards.push(savedCard);
+    }
+    handleCloseModal();
   };
 
-  if (authLoading) {
+  // TODO: Add Find Match functionality
+  const handleFindMatch = (profileCardId: string) => {
+    console.log("Find match for profile card:", profileCardId);
+    // This will eventually navigate to a match results page or open a match modal
+    router.push(`/find-matches?cardId=${profileCardId}`);
+  };
+
+  if (authLoading || isLoadingData) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-2">Loading Profile Cards...</p>
       </div>
     );
   }
 
-  if (currentUser?.role !== 'recommender') {
+  if (currentUser?.role !== USER_ROLES.RECOMMENDER) {
     return (
      <Alert variant="destructive" className="max-w-2xl mx-auto">
        <UserX className="h-4 w-4" />
        <AlertTitle className="font-headline">Access Denied</AlertTitle>
        <AlertDescription className="font-body">
-         This page is for users with the 'Recommender' role.
+         This page is for Matchmakers only.
        </AlertDescription>
      </Alert>
    );
@@ -83,44 +103,52 @@ export default function RecommendationsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="text-center">
-        <h1 className="font-headline text-4xl font-semibold text-primary">Make a Recommendation</h1>
-        <p className="font-body text-lg text-foreground/80 mt-2">
-          Find a single person you know and suggest a potential match for them from other users.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="text-center sm:text-left">
+            <h1 className="font-headline text-4xl font-semibold text-primary">My Profile Cards</h1>
+            <p className="font-body text-lg text-foreground/80 mt-2">
+            Manage the profiles of your single friends. Create new cards or edit existing ones.
+            </p>
+        </div>
+        <Button onClick={handleOpenCreateModal} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md">
+          <PlusCircle className="mr-2 h-5 w-5" /> Create New Profile Card
+        </Button>
       </div>
 
-      <div className="relative max-w-lg mx-auto">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search for singles (name, email, bio...)"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 py-3 text-lg font-body bg-card rounded-lg shadow"
-        />
-      </div>
-
-      {filteredUsers.length === 0 && searchTerm ? (
-        <p className="text-center font-body text-muted-foreground">No users found matching your search.</p>
-      ) : filteredUsers.length === 0 && !searchTerm ? (
-         <p className="text-center font-body text-muted-foreground">No single users available to recommend for.</p>
+      {myProfileCards.length === 0 ? (
+        <Card className="text-center py-12">
+          <CardHeader>
+            <div className="mx-auto bg-secondary p-4 rounded-full w-fit mb-4">
+              <BookOpen className="h-12 w-12 text-secondary-foreground" />
+            </div>
+            <CardTitle className="font-headline text-2xl">No Profile Cards Yet</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="font-body text-muted-foreground">
+              You haven't created any Profile Cards for your friends yet.
+              Click the button above to get started!
+            </p>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredUsers.map(user => (
-            <UserSearchCard key={user.id} user={user} onRecommend={handleOpenRecommendModal} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {myProfileCards.map(card => (
+            <ProfileCardDisplay 
+                key={card.id} 
+                profileCard={card} 
+                onEdit={() => handleOpenEditModal(card)}
+                onFindMatch={() => handleFindMatch(card.id)}
+            />
           ))}
         </div>
       )}
 
-      {selectedUserToRecommendFor && (
-        <RecommendModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          singleToRecommendFor={selectedUserToRecommendFor}
-          onRecommendationMade={handleNewRecommendation}
-        />
-      )}
+      <CreateEditProfileCardModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        profileCard={editingProfileCard}
+        onSave={handleProfileCardSaved}
+      />
     </div>
   );
 }

@@ -1,11 +1,13 @@
+
 "use client";
 
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Home, UserCircle, Users, LogOut, LogIn, UserPlus, HandHeart, Sparkles, ShieldCheck, Settings } from 'lucide-react';
+import { Home, UserCircle, Users, LogOut, LogIn, UserPlus, HandHeart, Sparkles, ShieldCheck, BookUser } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { USER_ROLES } from '@/lib/constants';
 
 export function Navbar() {
   const { currentUser, logout, isAuthenticated } = useAuth();
@@ -28,29 +30,20 @@ export function Navbar() {
             </Link>
           </div>
           <div className="flex items-center space-x-4">
-            {isAuthenticated && currentUser ? (
+            {isAuthenticated && currentUser && currentUser.role === USER_ROLES.RECOMMENDER ? (
               <>
                 <Link href="/dashboard" className={navLinkClass("/dashboard")}>
                   <Home className="h-4 w-4" /> Dashboard
                 </Link>
                 <Link href="/profile" className={navLinkClass("/profile")}>
-                  <UserCircle className="h-4 w-4" /> Profile
+                  <UserCircle className="h-4 w-4" /> My Profile
                 </Link>
-                {currentUser.role === 'single' && (
-                  <Link href="/matches" className={navLinkClass("/matches")}>
-                    <Users className="h-4 w-4" /> Matches
-                  </Link>
-                )}
-                {currentUser.role === 'recommender' && (
-                  <>
-                    <Link href="/recommendations" className={navLinkClass("/recommendations")}>
-                      <HandHeart className="h-4 w-4" /> Recommend
-                    </Link>
-                    <Link href="/suggestions" className={navLinkClass("/suggestions")}>
-                      <Sparkles className="h-4 w-4" /> AI Tips
-                    </Link>
-                  </>
-                )}
+                <Link href="/profile-cards" className={navLinkClass("/profile-cards")}>
+                  <BookUser className="h-4 w-4" /> Profile Cards
+                </Link>
+                <Link href="/suggestions" className={navLinkClass("/suggestions")}>
+                  <Sparkles className="h-4 w-4" /> AI Tips
+                </Link>
                 <Link href="/privacy" className={navLinkClass("/privacy")}>
                   <ShieldCheck className="h-4 w-4" /> Privacy
                 </Link>

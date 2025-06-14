@@ -1,46 +1,58 @@
-export type UserRole = 'single' | 'recommender';
 
-export interface UserProfile {
+export type UserRole = 'single' | 'recommender'; // 'single' role will be phased out from active use
+
+export interface UserProfile { // This is now the Matcher's profile
   id: string;
   email: string;
   name: string;
-  role: UserRole;
+  role: UserRole; // Will primarily be 'recommender'
   bio?: string;
-  interests?: string[];
+  interests?: string[]; // Matcher's interests (less relevant now)
   photoUrl?: string;
-  // For singles, provided by recommenders
-  recommenderNotes?: { recommenderId: string; recommenderName: string, notes: string }[]; 
-  // For storing preferences like age range, location, etc.
-  preferences?: Record<string, any>; 
+  preferences?: Record<string, any>; // Matcher's preferences (less relevant now)
 }
 
-export interface Recommendation {
+export interface ProfileCard { // Profile of a single friend, created by a Matcher
   id: string;
-  recommenderId: string; // User ID of the recommender
-  recommenderName: string;
-  singleId: string; // User ID of the single person being recommended for
-  potentialMatchId: string; // User ID of the potential match
-  potentialMatchName: string;
-  potentialMatchPhotoUrl?: string;
-  notes: string; // Personal notes from the recommender
-  familyIntro?: string; // Introduction from family, if applicable
-  status: 'pending' | 'accepted' | 'rejected' | 'contacted';
+  createdByMatcherId: string;
+  matcherName: string; // Name of the matcher who created this card
+  friendName: string;
+  friendEmail?: string; // For potential future email notifications to the friend
+  bio: string;
+  interests: string[];
+  photoUrl?: string;
+  preferences: {
+    ageRange?: string;
+    seeking?: string;
+    // Add other relevant preferences for matching
+    gender?: string; 
+    location?: string;
+  };
   createdAt: string; // ISO date string
 }
 
+export interface PotentialMatch { // Represents a potential match between two ProfileCards
+  id: string;
+  profileCardAId: string; // ID of the first ProfileCard
+  profileCardBId: string; // ID of the second ProfileCard
+  matcherAId: string; // Matcher who owns ProfileCardA
+  matcherBId: string; // Matcher who owns ProfileCardB
+  compatibilityScore?: number; // Optional: from AI
+  compatibilityReason?: string; // Optional: from AI
+  statusMatcherA: 'pending' | 'accepted' | 'rejected';
+  statusMatcherB: 'pending' | 'accepted' | 'rejected';
+  statusFriendA?: 'pending' | 'accepted' | 'rejected'; // If Matchers accept, then friend is notified
+  statusFriendB?: 'pending' | 'accepted' | 'rejected';
+  createdAt: string; // ISO date string
+  updatedAt?: string;
+}
+
+// This type might evolve or be replaced by PotentialMatch status updates
 export interface MatchFeedback {
   id: string;
-  recommendationId: string; 
-  userId: string; // User who is giving feedback (the single)
-  rating?: number; // e.g., 1-5 stars
+  potentialMatchId: string; 
+  matcherId: string; // Matcher giving feedback on the PotentialMatch
+  isInterested: boolean; // Matcher accepts or rejects the PotentialMatch pairing
   comments?: string;
-  isInterested?: boolean; // explicit interest or decline
   createdAt: string; // ISO date string
-}
-
-// For AI suggestions input
-export interface MatchImprovementInput {
-  userProfileSummary: string; // Summary of the single's profile
-  recommenderProfileSummary: string; // Summary of the recommender's approach/profile
-  pastMatchFeedbackSummary: string; // Summary of feedback from previous matches
 }

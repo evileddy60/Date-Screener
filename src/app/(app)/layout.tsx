@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect } from 'react';
@@ -5,20 +6,27 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Loader2 } from 'lucide-react';
+import { USER_ROLES } from '@/lib/constants';
 
 export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { currentUser, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/auth/login');
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.push('/auth/login');
+      } else if (currentUser && currentUser.role !== USER_ROLES.RECOMMENDER) {
+        // If somehow a non-recommender is authenticated, log them out or redirect
+        // For this app, only recommenders are allowed in the app section.
+        router.push('/auth/login'); 
+      }
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, currentUser]);
 
   if (isLoading) {
     return (
@@ -29,9 +37,7 @@ export default function AppLayout({
     );
   }
 
-  if (!isAuthenticated) {
-    // This will be briefly shown before redirect effect kicks in, or if redirect fails.
-    // Or, can return null if redirect is quick enough.
+  if (!isAuthenticated || (currentUser && currentUser.role !== USER_ROLES.RECOMMENDER)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <p className="text-lg font-medium text-foreground">Redirecting to login...</p>

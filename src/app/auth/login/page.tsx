@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -11,7 +12,7 @@ import { LogIn, Sparkles } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(''); // Password not used in mock auth, but good for form structure
+  const [password, setPassword] = useState(''); 
   const { login } = useAuth();
   const [error, setError] = useState('');
 
@@ -22,10 +23,7 @@ export default function LoginPage() {
       setError('Please enter your email.');
       return;
     }
-    // In a real app, you'd validate credentials against a backend.
-    // For mock, we just use the email.
-    // Try to log in with a 'single' role by default, or let AuthContext figure it out.
-    // Example: login(email, 'single');
+    // Login assumes user is a recommender/matcher
     login(email); 
   };
 
@@ -38,7 +36,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
           <CardTitle className="font-headline text-3xl text-primary">Login</CardTitle>
-          <CardDescription className="font-body">Access your account to find or recommend matches.</CardDescription>
+          <CardDescription className="font-body">Access your matchmaker account.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -74,13 +72,13 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex flex-col items-center space-y-2">
           <p className="font-body text-sm text-muted-foreground">
-            Don't have an account?{' '}
+            Want to become a matchmaker?{' '}
             <Button variant="link" asChild className="text-primary p-0 h-auto font-body">
               <Link href="/auth/signup">Sign up</Link>
             </Button>
           </p>
           <p className="font-body text-xs text-muted-foreground/70">
-            For demo: try 'single@example.com' or 'recommender@example.com'.
+            For demo: try 'matcher1@example.com' or 'recommender@example.com'.
           </p>
         </CardFooter>
       </Card>

@@ -1,26 +1,31 @@
+
 "use client";
 
-import type { Recommendation } from '@/types';
-import Link from 'next/link';
-import Image from 'next/image';
+// This component is no longer used directly as MatchCard for single's recommendations.
+// It will need to be significantly adapted or replaced to display
+// "PotentialMatch" data between two ProfileCards for Matcher review.
+// Keeping the file for reference, but it's effectively deprecated in its current form.
+
+import type { Recommendation } from '@/types'; // This type is from the old flow
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, MessageSquare, CalendarDays, ArrowRight } from 'lucide-react';
+import { User, MessageSquare, CalendarDays, ArrowRight, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-interface MatchCardProps {
-  recommendation: Recommendation;
+interface DeprecatedMatchCardProps {
+  recommendation: Recommendation; // Old Recommendation type
   onViewDetails: (recommendationId: string) => void;
 }
 
-export function MatchCard({ recommendation, onViewDetails }: MatchCardProps) {
+export function MatchCard({ recommendation, onViewDetails }: DeprecatedMatchCardProps) {
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
 
   return (
-    <Card className="shadow-lg hover:shadow-primary/20 transition-all duration-300 flex flex-col h-full">
+    <Card className="shadow-lg hover:shadow-primary/20 transition-all duration-300 flex flex-col h-full opacity-50 cursor-not-allowed">
       <CardHeader className="pb-3">
+         <CardDescription className="font-body text-center">DEPRECATED COMPONENT (MatchCard)</CardDescription>
         <div className="flex items-center gap-4 mb-3">
           <Avatar className="w-16 h-16 border-2 border-secondary">
             <AvatarImage src={recommendation.potentialMatchPhotoUrl} alt={recommendation.potentialMatchName} data-ai-hint="person portrait" />
@@ -46,14 +51,6 @@ export function MatchCard({ recommendation, onViewDetails }: MatchCardProps) {
             <span className="font-semibold">Recommender's Note:</span> {recommendation.notes}
           </p>
         </div>
-        {recommendation.familyIntro && (
-          <div className="font-body text-sm text-foreground/80 flex items-start gap-2">
-            <Users className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
-            <p className="line-clamp-2 leading-relaxed">
-              <span className="font-semibold">Family Intro:</span> {recommendation.familyIntro}
-            </p>
-          </div>
-        )}
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row justify-between items-center pt-4 border-t">
         <p className="font-body text-xs text-muted-foreground mb-2 sm:mb-0 flex items-center gap-1">

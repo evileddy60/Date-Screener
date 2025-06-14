@@ -1,94 +1,114 @@
-import type { UserProfile, Recommendation, MatchFeedback } from '@/types';
 
+import type { UserProfile, ProfileCard, PotentialMatch, MatchFeedback } from '@/types';
+
+// UserProfiles are now primarily Matchers
 export const mockUserProfiles: UserProfile[] = [
   {
-    id: 'user1',
-    email: 'single@example.com',
-    name: 'Alex Johnson',
-    role: 'single',
-    bio: "Adventure enthusiast, love hiking and exploring new cafes. Looking for someone with a good sense of humor and a kind heart. Values open communication and shared experiences. I enjoy reading sci-fi novels and trying new recipes on weekends.",
-    interests: ['hiking', 'coffee', 'sci-fi', 'cooking'],
-    photoUrl: 'https://placehold.co/400x400/FF7F50/FFFFFF?text=AJ',
-    preferences: { ageRange: '28-35', seeking: 'long-term relationship' },
-    recommenderNotes: [
-      { recommenderId: 'user2', recommenderName: 'Sarah Miller (Friend)', notes: 'Alex is amazing! Very thoughtful and has a great outlook on life. Would be great with someone who is active and loves deep conversations.'}
-    ]
-  },
-  {
-    id: 'user2',
-    email: 'recommender@example.com',
+    id: 'matcher1',
+    email: 'matcher1@example.com',
     name: 'Sarah Miller',
     role: 'recommender',
-    bio: "Alex's best friend. I know Alex well and want to help find someone great! I'm good at spotting compatible personalities.",
+    bio: "Passionate about connecting people! I believe there's someone for everyone.",
     photoUrl: 'https://placehold.co/400x400/E6E6FA/000000?text=SM',
   },
   {
-    id: 'user3',
-    email: 'potentialmatch1@example.com',
-    name: 'Jamie Lee',
-    role: 'single',
-    bio: "Creative professional, passionate about art and music. Enjoys quiet evenings, good books, and meaningful conversations. I volunteer at an animal shelter and love dogs.",
-    interests: ['art', 'music', 'books', 'volunteering', 'dogs'],
-    photoUrl: 'https://placehold.co/400x400/8A2BE2/FFFFFF?text=JL',
-    preferences: { ageRange: '30-38', seeking: 'companionship' },
-  },
-  {
-    id: 'user4',
-    email: 'another_single@example.com',
-    name: 'Chris Davis',
-    role: 'single',
-    bio: "Software engineer by day, aspiring chef by night. I love technology, board games, and cycling. Looking for a partner to share laughs and adventures with.",
-    interests: ['technology', 'board games', 'cycling', 'cooking'],
-    photoUrl: 'https://placehold.co/400x400/3CB371/FFFFFF?text=CD',
-    preferences: { ageRange: '29-36', seeking: 'long-term relationship' },
-  },
-  {
-    id: 'user5',
-    email: 'recommender_family@example.com',
-    name: 'Maria Garcia (Aunt)',
+    id: 'matcher2',
+    email: 'matcher2@example.com',
+    name: 'David Chen',
     role: 'recommender',
-    bio: "Alex's aunt. I have a good feeling about finding the right person for Alex. Family is important, and so is finding a kind soul.",
+    bio: "Been playing matchmaker for friends for years. Let's find some great connections.",
+    photoUrl: 'https://placehold.co/400x400/7FFFD4/000000?text=DC',
+  },
+  {
+    id: 'matcher3',
+    email: 'recommender@example.com', // Keep this for easy login
+    name: 'Maria Garcia',
+    role: 'recommender',
+    bio: "Hoping to help my friends find their special someone. I have a good intuition for these things!",
     photoUrl: 'https://placehold.co/400x400/DB7093/FFFFFF?text=MG',
   },
 ];
 
-export const mockRecommendations: Recommendation[] = [
+export const mockProfileCards: ProfileCard[] = [
   {
-    id: 'rec1',
-    recommenderId: 'user2',
-    recommenderName: 'Sarah Miller',
-    singleId: 'user1', // Alex Johnson
-    potentialMatchId: 'user3', // Jamie Lee
-    potentialMatchName: 'Jamie Lee',
-    potentialMatchPhotoUrl: 'https://placehold.co/400x400/8A2BE2/FFFFFF?text=JL',
-    notes: "I think Jamie would be a great match for Alex! They both seem to value deeper connections and have creative interests. Jamie's love for animals might also resonate with Alex's kind nature.",
-    familyIntro: "Jamie seems like a wonderful person, introduced by a mutual friend who speaks very highly of their character.",
-    status: 'pending',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+    id: 'pc1',
+    createdByMatcherId: 'matcher1', // Sarah Miller
+    matcherName: 'Sarah Miller',
+    friendName: 'Alex Johnson',
+    friendEmail: 'alex.johnson.friend@example.com',
+    bio: "Alex is an adventure enthusiast, loves hiking and exploring new cafes. Looking for someone with a good sense of humor and a kind heart. Values open communication and shared experiences. Enjoys reading sci-fi novels and trying new recipes on weekends.",
+    interests: ['hiking', 'coffee', 'sci-fi', 'cooking', 'travel'],
+    photoUrl: 'https://placehold.co/400x400/FF7F50/FFFFFF?text=AJ',
+    preferences: { ageRange: '28-35', seeking: 'long-term relationship', gender: 'Any', location: 'New York' },
+    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
   },
   {
-    id: 'rec2',
-    recommenderId: 'user5',
-    recommenderName: 'Maria Garcia (Aunt)',
-    singleId: 'user1', // Alex Johnson
-    potentialMatchId: 'user4', // Chris Davis
-    potentialMatchName: 'Chris Davis',
-    potentialMatchPhotoUrl: 'https://placehold.co/400x400/3CB371/FFFFFF?text=CD',
-    notes: "Chris sounds like a stable and fun person. My friend's son knows him from a cycling club and says he's very genuine. Could be a good fit for Alex's adventurous side!",
-    familyIntro: "Chris comes from a good family, known for their kindness and community involvement.",
-    status: 'accepted',
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), // 5 days ago
+    id: 'pc2',
+    createdByMatcherId: 'matcher2', // David Chen
+    matcherName: 'David Chen',
+    friendName: 'Jamie Lee',
+    friendEmail: 'jamie.lee.friend@example.com',
+    bio: "Jamie is a creative professional, passionate about art and music. Enjoys quiet evenings, good books, and meaningful conversations. Volunteers at an animal shelter and loves dogs.",
+    interests: ['art', 'music', 'books', 'volunteering', 'dogs', 'photography'],
+    photoUrl: 'https://placehold.co/400x400/8A2BE2/FFFFFF?text=JL',
+    preferences: { ageRange: '30-38', seeking: 'companionship', gender: 'Any', location: 'New York' },
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
   },
+  {
+    id: 'pc3',
+    createdByMatcherId: 'matcher1', // Sarah Miller
+    matcherName: 'Sarah Miller',
+    friendName: 'Chris Davis',
+    friendEmail: 'chris.davis.friend@example.com',
+    bio: "Chris is a software engineer by day, aspiring chef by night. Loves technology, board games, and cycling. Looking for a partner to share laughs and adventures with.",
+    interests: ['technology', 'board games', 'cycling', 'cooking', 'movies'],
+    photoUrl: 'https://placehold.co/400x400/3CB371/FFFFFF?text=CD',
+    preferences: { ageRange: '29-36', seeking: 'long-term relationship', gender: 'Any', location: 'San Francisco' },
+    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+  },
+   {
+    id: 'pc4',
+    createdByMatcherId: 'matcher3', // Maria Garcia
+    matcherName: 'Maria Garcia',
+    friendName: 'Diana Prince',
+    friendEmail: 'diana.prince.friend@example.com',
+    bio: "Diana is a compassionate and strong individual, working in humanitarian aid. Enjoys history, museum visits, and athletic activities. Values honesty and courage.",
+    interests: ['history', 'museums', 'athletics', 'humanitarian work', 'philosophy'],
+    photoUrl: 'https://placehold.co/400x400/1E90FF/FFFFFF?text=DP',
+    preferences: { ageRange: '30-40', seeking: 'meaningful connection', gender: 'Any', location: 'Global' },
+    createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+  }
 ];
 
-export const mockMatchFeedback: MatchFeedback[] = [
+// Mock data for PotentialMatches between ProfileCards, awaiting Matcher approval
+export const mockPotentialMatches: PotentialMatch[] = [
+  // Example: AI suggests Alex (pc1) and Jamie (pc2) might be a good match.
+  // Sarah (matcher1) and David (matcher2) would need to approve this.
   {
-    id: 'fb1',
-    recommendationId: 'rec2',
-    userId: 'user1',
-    isInterested: true,
-    comments: "Chris seems really interesting! I'd like to connect.",
-    rating: 5,
-    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
+    id: 'pm1',
+    profileCardAId: 'pc1', 
+    profileCardBId: 'pc2',
+    matcherAId: 'matcher1',
+    matcherBId: 'matcher2',
+    compatibilityScore: 85,
+    compatibilityReason: "Shared interests in creative pursuits and meaningful connections. Complementary personalities.",
+    statusMatcherA: 'pending',
+    statusMatcherB: 'pending',
+    createdAt: new Date().toISOString(),
   }
+];
+
+// Mock data for MatchFeedback from Matchers on PotentialMatches
+export const mockMatchFeedback: MatchFeedback[] = [
+    // Example: Sarah (matcher1) accepts the suggested pairing of her friend Alex (pc1) with Jamie (pc2)
+  /*
+  {
+    id: 'mf1',
+    potentialMatchId: 'pm1',
+    matcherId: 'matcher1',
+    isInterested: true,
+    comments: "This looks like a great suggestion! I think Alex and Jamie could get along well.",
+    createdAt: new Date().toISOString(),
+  }
+  */
 ];

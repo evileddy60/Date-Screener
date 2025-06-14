@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -5,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
-import { UserCircle, Users, HandHeart, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react';
+import { UserCircle, BookUser, Sparkles, ShieldCheck, ArrowRight, SearchHeart, Users } from 'lucide-react';
+import { USER_ROLES } from '@/lib/constants';
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
@@ -34,24 +36,36 @@ export default function DashboardPage() {
       </Card>
     </Link>
   );
+  
+  // Ensure this page is only for recommenders
+  if (currentUser.role !== USER_ROLES.RECOMMENDER) {
+    return (
+        <Card className="max-w-lg mx-auto mt-10">
+            <CardHeader>
+                <CardTitle>Access Denied</CardTitle>
+                <CardDescription>This area is for Matchmakers only. Please sign up or log in as a Matchmaker.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild><Link href="/auth/login">Go to Login</Link></Button>
+            </CardContent>
+        </Card>
+    );
+  }
 
   return (
     <div className="space-y-8">
       <Card className="bg-gradient-to-r from-primary/80 via-primary to-accent/60 text-primary-foreground shadow-xl overflow-hidden">
         <div className="flex flex-col md:flex-row items-center justify-between p-8">
           <div>
-            <h1 className="font-headline text-4xl font-bold mb-2">Hello, {currentUser.name}!</h1>
+            <h1 className="font-headline text-4xl font-bold mb-2">Hello, Matchmaker {currentUser.name}!</h1>
             <p className="font-body text-lg opacity-90">
-              Welcome back to Date Screener. Ready to make some connections?
-            </p>
-            <p className="font-body text-sm opacity-80 mt-1">
-              You are logged in as a: <span className="font-semibold capitalize">{currentUser.role}</span>.
+              Ready to create profiles for your friends and find them great matches?
             </p>
           </div>
           <Image 
-            src={`https://placehold.co/300x200/${currentUser.role === 'single' ? 'FF7F50' : 'E6E6FA'}/FFFFFF?text=Welcome!`}
-            alt="Welcome illustration"
-            data-ai-hint="welcome abstract"
+            src="https://placehold.co/300x200/FFACD/FFFFFF?text=Matchmaker+Zone"
+            alt="Matchmaker illustration"
+            data-ai-hint="people connecting hearts"
             width={250}
             height={150}
             className="rounded-lg mt-6 md:mt-0 shadow-md object-cover"
@@ -60,51 +74,29 @@ export default function DashboardPage() {
       </Card>
 
       <section>
-        <h2 className="font-headline text-2xl font-semibold text-foreground mb-4">Quick Actions</h2>
+        <h2 className="font-headline text-2xl font-semibold text-foreground mb-4">Your Matchmaking Toolkit</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <QuickLink href="/profile" icon={UserCircle} title="My Profile" description="View and update your personal information and preferences." />
-          
-          {currentUser.role === 'single' && (
-            <QuickLink href="/matches" icon={Users} title="View Matches" description="See who your friends and family have recommended for you." />
-          )}
-
-          {currentUser.role === 'recommender' && (
-            <>
-              <QuickLink href="/recommendations" icon={HandHeart} title="Recommend Match" description="Suggest a potential match for someone you know." />
-              <QuickLink href="/suggestions" icon={Sparkles} title="AI Matching Tips" description="Get AI-powered advice to improve your recommendations." />
-            </>
-          )}
-          <QuickLink href="/privacy" icon={ShieldCheck} title="Privacy Settings" description="Manage your profile visibility and communication preferences." />
+          <QuickLink href="/profile" icon={UserCircle} title="My Matchmaker Profile" description="View and update your personal information." />
+          <QuickLink href="/profile-cards" icon={BookUser} title="Manage Profile Cards" description="Create and manage profiles for your single friends." />
+          {/* This will be the next step: finding matches between profile cards */}
+          <QuickLink href="/find-matches" icon={SearchHeart} title="Discover Matches" description="Find potential matches between the Profile Cards you've created." /> 
+          <QuickLink href="/suggestions" icon={Sparkles} title="AI Matching Tips" description="Get AI-powered advice to improve your matchmaking." />
+          <QuickLink href="/privacy" icon={ShieldCheck} title="Privacy Settings" description="Manage your account settings and preferences." />
+           <QuickLink href="/potential-matches" icon={Users} title="Review Matches" description="Review and approve/reject AI-suggested matches between profile cards." />
         </div>
       </section>
 
-      {currentUser.role === 'single' && (
-         <Card>
-          <CardHeader>
-            <CardTitle className="font-headline text-xl">New to Date Screener?</CardTitle>
-            <CardDescription className="font-body">Make sure your profile is complete so your recommenders can find great matches for you!</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/profile">Complete Your Profile</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {currentUser.role === 'recommender' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-headline text-xl">Ready to Play Matchmaker?</CardTitle>
-            <CardDescription className="font-body">Start by finding singles you know and suggesting potential matches for them.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/recommendations">Make a Recommendation</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline text-xl">New to Matchmaking?</CardTitle>
+          <CardDescription className="font-body">Start by creating Profile Cards for your single friends. The more detail, the better the matches!</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/profile-cards">Create a Profile Card</Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
