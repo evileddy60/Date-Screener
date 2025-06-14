@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
-import { UserCircle, BookUser, Sparkles, ShieldCheck, ArrowRight, SearchHeart, Users } from 'lucide-react';
+import { UserCircle, BookUser, Sparkles, ShieldCheck, ArrowRight, Users, ClipboardCheck } from 'lucide-react'; // Removed SearchHeart
 import { USER_ROLES } from '@/lib/constants';
 
 export default function DashboardPage() {
@@ -37,7 +37,6 @@ export default function DashboardPage() {
     </Link>
   );
   
-  // Ensure this page is only for recommenders
   if (currentUser.role !== USER_ROLES.RECOMMENDER) {
     return (
         <Card className="max-w-lg mx-auto mt-10">
@@ -77,12 +76,10 @@ export default function DashboardPage() {
         <h2 className="font-headline text-2xl font-semibold text-foreground mb-4">Your Matchmaking Toolkit</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <QuickLink href="/profile" icon={UserCircle} title="My Matchmaker Profile" description="View and update your personal information." />
-          <QuickLink href="/profile-cards" icon={BookUser} title="Manage Profile Cards" description="Create and manage profiles for your single friends." />
-          {/* This will be the next step: finding matches between profile cards */}
-          <QuickLink href="/find-matches" icon={SearchHeart} title="Discover Matches" description="Find potential matches between the Profile Cards you've created." /> 
+          <QuickLink href="/profile-cards" icon={BookUser} title="Manage Profile Cards" description="Create and manage profiles for your single friends. Find matches from here." />
+          <QuickLink href="/potential-matches" icon={Users} title="Review Matches" description="Review and approve/reject AI-suggested matches between profile cards." />
           <QuickLink href="/suggestions" icon={Sparkles} title="AI Matching Tips" description="Get AI-powered advice to improve your matchmaking." />
           <QuickLink href="/privacy" icon={ShieldCheck} title="Privacy Settings" description="Manage your account settings and preferences." />
-           <QuickLink href="/potential-matches" icon={Users} title="Review Matches" description="Review and approve/reject AI-suggested matches between profile cards." />
         </div>
       </section>
 

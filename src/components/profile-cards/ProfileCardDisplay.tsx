@@ -9,15 +9,21 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { User, Info, Edit, SearchHeart, CalendarDays, AtSign } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useRouter } from 'next/navigation'; // Added for navigation
 
 interface ProfileCardDisplayProps {
   profileCard: ProfileCard;
   onEdit: () => void;
-  onFindMatch: () => void;
+  onFindMatch: (profileCardId: string) => void; // Changed to accept ID
 }
 
 export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch }: ProfileCardDisplayProps) {
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const router = useRouter(); // Initialize router
+
+  const handleFindMatchClick = () => {
+    onFindMatch(profileCard.id); // Call parent handler which should navigate
+  };
 
   return (
     <Card className="shadow-lg hover:shadow-primary/20 transition-all duration-300 flex flex-col h-full">
@@ -72,7 +78,7 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch }: Profile
                 <Edit className="mr-2 h-4 w-4" /> Edit
             </Button>
         </div>
-        <Button onClick={onFindMatch} size="sm" variant="default" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow hover:shadow-md transition-all">
+        <Button onClick={handleFindMatchClick} size="sm" variant="default" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow hover:shadow-md transition-all">
           <SearchHeart className="mr-2 h-4 w-4" /> Find Match for {profileCard.friendName}
         </Button>
       </CardFooter>
