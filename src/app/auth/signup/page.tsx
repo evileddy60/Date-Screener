@@ -114,9 +114,9 @@ export default function SignupPage() {
             <Alert variant="default" className="bg-secondary/20 border-secondary/30">
               <Info className="h-4 w-4 text-secondary-foreground" />
               <AlertDescription className="font-body text-xs text-secondary-foreground/80 space-y-1">
-                <p>Date Screener is not legally responsible for users using the app maliciously.</p>
-                <p>You must have permission from the individual before creating a Profile Card for them.</p>
-                <p>Matches are not a guarantee that the people will even like each other; this is just to help single people find suitable partners with the help of their friends screening people.</p>
+                <p>Date Screener disclaims legal responsibility for any malicious use of the application by its users.</p>
+                <p>Users must obtain explicit consent from an individual before creating a Profile Card on their behalf.</p>
+                <p>Match suggestions are provided for informational purposes only and do not constitute a guarantee of compatibility or mutual interest. The service aims to facilitate connections based on user-provided information and friend recommendations.</p>
               </AlertDescription>
             </Alert>
             
