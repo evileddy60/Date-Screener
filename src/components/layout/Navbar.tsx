@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { USER_ROLES } from '@/lib/constants';
 
 export function Navbar() {
-  const { currentUser, logout, isAuthenticated } = useAuth();
+  const { currentUser, firebaseUser, logoutUser, isAuthenticated } = useAuth(); // Added firebaseUser, updated to logoutUser
   const pathname = usePathname();
 
   const navLinkClass = (path: string) => 
@@ -41,13 +41,16 @@ export function Navbar() {
                 <Link href="/profile-cards" className={navLinkClass("/profile-cards")}>
                   <BookUser className="h-4 w-4" /> Profile Cards
                 </Link>
+                 <Link href="/potential-matches" className={navLinkClass("/potential-matches")}>
+                  <Users className="h-4 w-4" /> Review Matches
+                </Link>
                 <Link href="/suggestions" className={navLinkClass("/suggestions")}>
                   <Sparkles className="h-4 w-4" /> AI Tips
                 </Link>
                 <Link href="/privacy" className={navLinkClass("/privacy")}>
                   <ShieldCheck className="h-4 w-4" /> Privacy
                 </Link>
-                <Button variant="ghost" size="sm" onClick={logout} className="text-foreground/80 hover:text-primary">
+                <Button variant="ghost" size="sm" onClick={logoutUser} className="text-foreground/80 hover:text-primary">
                   <LogOut className="mr-2 h-4 w-4" /> Logout
                 </Button>
               </>

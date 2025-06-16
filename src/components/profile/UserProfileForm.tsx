@@ -13,46 +13,61 @@ import { USER_ROLES } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Save, UserCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext'; // To access current user ID
 
 // Schema for Matcher's own profile
 const matcherProfileSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters."),
-  email: z.string().email("Invalid email address."),
-  // Role is fixed to recommender, not editable here for simplicity, set by system
-  bio: z.string().optional().describe("Your bio as a matchmaker."),
+  name: z.string().min(2, "Name must be at least 2 characters.").max(50, "Name cannot exceed 50 characters."),
+  // Email is not editable through this form, it's tied to Firebase Auth
+  bio: z.string().max(500, "Bio cannot exceed 500 characters.").optional(),
   photoUrl: z.string().url("Must be a valid URL for your photo.").optional().or(z.literal('')),
 });
 
 type MatcherProfileFormData = z.infer<typeof matcherProfileSchema>;
 
 interface UserProfileFormProps {
-  profile?: UserProfile; // Matcher's profile
+  profile: UserProfile; // Matcher's profile (should always be provided now)
   onSubmit: (data: UserProfile) => void;
 }
 
 export function UserProfileForm({ profile, onSubmit }: UserProfileFormProps) {
   const { toast } = useToast();
+  const { firebaseUser } = useAuth(); // Get firebaseUser for ID
+
   const form = useForm<MatcherProfileFormData>({
     resolver: zodResolver(matcherProfileSchema),
     defaultValues: {
       name: profile?.name || '',
-      email: profile?.email || '',
-      bio: profile?.bio || '', // Matcher's bio
+      // email: profile?.email || '', // Not editable here
+      bio: profile?.bio || '',
       photoUrl: profile?.photoUrl || '',
     },
   });
+  
+  // Reset form if profile prop changes (e.g., after initial load with default data)
+  React.useEffect(() => {
+    if (profile) {
+      form.reset({
+        name: profile.name,
+        bio: profile.bio || '',
+        photoUrl: profile.photoUrl || '',
+      });
+    }
+  }, [profile, form]);
+
 
   const handleSubmit = (data: MatcherProfileFormData) => {
+    if (!firebaseUser) {
+        toast({ variant: "destructive", title: "Error", description: "You are not logged in." });
+        return;
+    }
     const updatedProfile: UserProfile = {
-      ...(profile || { id: Date.now().toString(), role: USER_ROLES.RECOMMENDER }), // Keep existing ID or generate one
+      id: firebaseUser.uid, // Use Firebase UID as the profile ID
+      email: firebaseUser.email || profile.email, // Email from Firebase or existing profile
       ...data,
       role: USER_ROLES.RECOMMENDER, // Ensure role is always recommender
-      // Clear out single-specific fields if they somehow existed
-      interests: undefined, 
-      preferences: undefined,
-      recommenderNotes: undefined,
     };
-    onSubmit(updatedProfile);
+    onSubmit(updatedProfile); // This will update localStorage and AuthContext state via parent
     toast({
       title: "Matchmaker Profile Saved!",
       description: "Your information has been updated.",
@@ -66,7 +81,7 @@ export function UserProfileForm({ profile, onSubmit }: UserProfileFormProps) {
           <UserCircle className="w-7 h-7" /> {profile ? 'Edit Your Matchmaker Profile' : 'Create Your Matchmaker Profile'}
         </CardTitle>
         <CardDescription className="font-body">
-          Tell us about yourself as a matchmaker. This information is for your account.
+          Update your matchmaker details. Your email (<span className="font-semibold">{profile?.email || firebaseUser?.email}</span>) is linked to your account and cannot be changed here.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -85,20 +100,7 @@ export function UserProfileForm({ profile, onSubmit }: UserProfileFormProps) {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-body">Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="you@example.com" {...field} className="font-body bg-card" readOnly={!!profile?.email} />
-                  </FormControl>
-                  {profile?.email && <FormDescription className="font-body text-xs">Email cannot be changed after account creation.</FormDescription>}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            
             <FormField
               control={form.control}
               name="bio"

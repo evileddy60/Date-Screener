@@ -8,23 +8,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogIn, Sparkles } from 'lucide-react';
+import { LogIn, Sparkles, Loader2 } from 'lucide-react'; // Added Loader2
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState(''); 
-  const { login } = useAuth();
-  const [error, setError] = useState('');
+  const { loginUser, isLoading } = useAuth(); // Updated to loginUser and added isLoading
+  const [error, setError] = useState(''); // Local error state for form validation
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!email) {
-      setError('Please enter your email.');
+    if (!email || !password) {
+      setError('Please enter both email and password.');
       return;
     }
-    // Login assumes user is a recommender/matcher
-    login(email); 
+    // setError(''); // Clear local error before trying to login
+    await loginUser(email, password); 
+    // Firebase errors will be handled by toast in AuthContext
   };
 
   return (
@@ -50,6 +51,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="font-body bg-card"
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -62,23 +64,22 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="font-body bg-card"
+                disabled={isLoading}
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body text-lg py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-              <LogIn className="mr-2 h-5 w-5" /> Login
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body text-lg py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105" disabled={isLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <LogIn className="mr-2 h-5 w-5" />}
+              Login
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex flex-col items-center space-y-2">
           <p className="font-body text-sm text-muted-foreground">
-            Want to become a matchmaker?{' '}
+            New Matchmaker?{' '}
             <Button variant="link" asChild className="text-primary p-0 h-auto font-body">
               <Link href="/auth/signup">Sign up</Link>
             </Button>
-          </p>
-          <p className="font-body text-xs text-muted-foreground/70">
-            For demo: try 'matcher1@example.com' or 'recommender@example.com'.
           </p>
         </CardFooter>
       </Card>

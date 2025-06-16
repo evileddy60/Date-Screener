@@ -8,27 +8,35 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import type { UserRole } from '@/types';
 import { USER_ROLES } from '@/lib/constants';
-import { UserPlus, Sparkles } from 'lucide-react';
+import { UserPlus, Sparkles, Loader2 } from 'lucide-react'; // Added Loader2
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [password, setPassword] = useState(''); // Not used in mock auth
-  const { login } = useAuth(); 
+  const [password, setPassword] = useState(''); 
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const { signupUser, isLoading } = useAuth(); // Updated to signupUser and added isLoading
   const [error, setError] = useState('');
 
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!email || !name) {
+    if (!email || !name || !password || !confirmPassword) {
       setError('Please fill in all fields.');
       return;
     }
-    // All signups are for Matchers (Recommenders)
-    login(email, USER_ROLES.RECOMMENDER); 
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+    
+    await signupUser(email, password, name);
+    // Firebase errors will be handled by toast in AuthContext
   };
 
   return (
@@ -54,6 +62,7 @@ export default function SignupPage() {
                 onChange={(e) => setName(e.target.value)}
                 required
                 className="font-body bg-card"
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -66,6 +75,7 @@ export default function SignupPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="font-body bg-card"
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -73,16 +83,31 @@ export default function SignupPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="•••••••• (min. 6 characters)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="font-body bg-card"
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="font-body text-foreground/80">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className="font-body bg-card"
+                disabled={isLoading}
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body text-lg py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-              <UserPlus className="mr-2 h-5 w-5" /> Sign Up as a Matchmaker
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body text-lg py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105" disabled={isLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <UserPlus className="mr-2 h-5 w-5" />}
+              Sign Up as a Matchmaker
             </Button>
           </form>
         </CardContent>

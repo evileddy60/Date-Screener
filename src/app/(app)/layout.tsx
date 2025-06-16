@@ -13,20 +13,20 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { currentUser, isAuthenticated, isLoading } = useAuth();
+  const { currentUser, firebaseUser, isAuthenticated, isLoading } = useAuth(); // Added firebaseUser
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading) {
-      if (!isAuthenticated) {
+      if (!firebaseUser) { // Check firebaseUser for auth state
         router.push('/auth/login');
       } else if (currentUser && currentUser.role !== USER_ROLES.RECOMMENDER) {
-        // If somehow a non-recommender is authenticated, log them out or redirect
-        // For this app, only recommenders are allowed in the app section.
+        // This case should ideally not happen if signup/login enforces recommender role
+        // but as a fallback, redirect.
         router.push('/auth/login'); 
       }
     }
-  }, [isAuthenticated, isLoading, router, currentUser]);
+  }, [firebaseUser, currentUser, isAuthenticated, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -37,7 +37,8 @@ export default function AppLayout({
     );
   }
 
-  if (!isAuthenticated || (currentUser && currentUser.role !== USER_ROLES.RECOMMENDER)) {
+  // Check firebaseUser for initial auth check, then currentUser for role
+  if (!firebaseUser || (currentUser && currentUser.role !== USER_ROLES.RECOMMENDER)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <p className="text-lg font-medium text-foreground">Redirecting to login...</p>
