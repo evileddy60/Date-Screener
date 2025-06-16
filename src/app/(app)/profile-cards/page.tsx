@@ -53,21 +53,22 @@ export default function ProfileCardsPage() {
   };
   
   const handleProfileCardSaved = (savedCard: ProfileCardType) => {
-    setMyProfileCards(prevCards => {
-      const cardIndex = prevCards.findIndex(c => c.id === savedCard.id);
-      if (cardIndex !== -1) {
-        const updatedCards = [...prevCards];
-        updatedCards[cardIndex] = savedCard;
-        return updatedCards;
-      }
-      return [...prevCards, savedCard];
-    });
+    if (!currentUser) return; 
+
+    // First, update the mockProfileCards array (our source of truth for the session)
     const mockIndex = mockProfileCards.findIndex(c => c.id === savedCard.id);
     if (mockIndex !== -1) {
-        mockProfileCards[mockIndex] = savedCard;
+        mockProfileCards[mockIndex] = savedCard; // Update existing
     } else {
-        mockProfileCards.push(savedCard);
+        mockProfileCards.push(savedCard); // Add new
     }
+
+    // Then, re-filter from the updated mockProfileCards to update the local state
+    const updatedUserCards = mockProfileCards.filter(
+      card => card.createdByMatcherId === currentUser.id
+    );
+    setMyProfileCards(updatedUserCards);
+
     handleCloseModal();
   };
 
