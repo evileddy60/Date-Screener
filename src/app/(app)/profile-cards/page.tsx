@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMockProfileCards, saveMockProfileCard } from '@/lib/mockData';
+import { getProfileCardsByMatcher, addProfileCard, updateProfileCard } from '@/lib/firestoreService';
 import type { ProfileCard as ProfileCardType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ProfileCardDisplay } from '@/components/profile-cards/ProfileCardDisplay';
@@ -23,18 +23,27 @@ export default function ProfileCardsPage() {
   const [editingProfileCard, setEditingProfileCard] = useState<ProfileCardType | null>(null);
 
   useEffect(() => {
-    if (!authLoading && currentUser) {
-      if (currentUser.role !== USER_ROLES.RECOMMENDER) {
-        router.push('/dashboard');
-        return;
+    async function fetchCards() {
+      if (!authLoading && currentUser) {
+        if (currentUser.role !== USER_ROLES.RECOMMENDER) {
+          router.push('/dashboard');
+          return;
+        }
+        setIsLoadingData(true);
+        try {
+          const cards = await getProfileCardsByMatcher(currentUser.id);
+          setMyProfileCards(cards.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        } catch (error) {
+          console.error("Error fetching profile cards:", error);
+          // Optionally, set an error state to display to the user
+        } finally {
+          setIsLoadingData(false);
+        }
+      } else if (!authLoading && !currentUser) {
+        router.push('/auth/login');
       }
-      const allCards = getMockProfileCards();
-      const cards = allCards.filter(card => card.createdByMatcherId === currentUser.id);
-      setMyProfileCards(cards);
-      setIsLoadingData(false);
-    } else if (!authLoading && !currentUser) {
-      router.push('/auth/login');
     }
+    fetchCards();
   }, [currentUser, authLoading, router]);
 
   const handleOpenCreateModal = () => {
@@ -52,19 +61,38 @@ export default function ProfileCardsPage() {
     setEditingProfileCard(null);
   };
   
-  const handleProfileCardSaved = (savedCard: ProfileCardType) => {
+  const handleProfileCardSaved = async (savedCardData: Omit<ProfileCardType, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'>, existingCardId?: string) => {
     if (!currentUser) return;
+    setIsLoadingData(true); // Indicate loading while saving and refetching
 
-    saveMockProfileCard(savedCard); // Save to mockData (which now handles localStorage)
+    try {
+      if (existingCardId) {
+        // This is an update
+        const cardToUpdate: ProfileCardType = {
+          ...savedCardData,
+          id: existingCardId,
+          createdByMatcherId: currentUser.id, // Ensure this is set
+          matcherName: currentUser.name, // Ensure this is set
+           // Retain original createdAt, or fetch original card to get it if not passed
+          createdAt: myProfileCards.find(c => c.id === existingCardId)?.createdAt || new Date().toISOString(),
+        };
+        await updateProfileCard(cardToUpdate);
+      } else {
+        // This is a new card
+        await addProfileCard(savedCardData, currentUser.id, currentUser.name);
+      }
+      
+      // Re-fetch cards to update the list
+      const cards = await getProfileCardsByMatcher(currentUser.id);
+      setMyProfileCards(cards.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 
-    // Re-filter from the source to update the local state
-    const allCards = getMockProfileCards();
-    const updatedUserCards = allCards.filter(
-      card => card.createdByMatcherId === currentUser.id
-    );
-    setMyProfileCards(updatedUserCards);
-
-    handleCloseModal();
+    } catch (error) {
+      console.error("Error saving profile card:", error);
+      // Handle error (e.g., show toast)
+    } finally {
+      setIsLoadingData(false);
+      handleCloseModal();
+    }
   };
 
   const handleFindMatch = (profileCardId: string) => {
@@ -138,7 +166,7 @@ export default function ProfileCardsPage() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         profileCard={editingProfileCard}
-        onSave={handleProfileCardSaved}
+        onSave={(data) => handleProfileCardSaved(data, editingProfileCard?.id)}
       />
     </div>
   );

@@ -6,9 +6,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { ProfileCard } from '@/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as ShadDialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as ShadDialogDescription, DialogFooter } from '@/components/ui/dialog'; // DialogClose removed
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+// Label removed as FormLabel is used
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
@@ -20,7 +20,7 @@ interface CreateEditProfileCardModalProps {
   isOpen: boolean;
   onClose: () => void;
   profileCard?: ProfileCard | null; // Existing card for editing, null/undefined for creating
-  onSave: (savedCard: ProfileCard) => void;
+  onSave: (data: Omit<ProfileCard, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'>) => void; // Modified to pass only form data
 }
 
 const profileCardSchema = z.object({
@@ -29,10 +29,12 @@ const profileCardSchema = z.object({
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
   photoUrl: z.string().url("Invalid URL format for photo.").optional().or(z.literal('')),
-  ageRangePreference: z.string().optional(),
-  seekingPreference: z.string().optional(),
-  genderPreference: z.string().optional(),
-  locationPreference: z.string().optional(),
+  preferences: z.object({
+      ageRange: z.string().optional(),
+      seeking: z.string().optional(),
+      gender: z.string().optional(), 
+      location: z.string().optional(),
+  }).optional(),
 });
 
 type ProfileCardFormData = z.infer<typeof profileCardSchema>;
@@ -48,40 +50,48 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
       friendName: '',
       friendEmail: '',
       bio: '',
-      interests: [],
+      interests: [], // This will be a string in the form, transformed by Zod
       photoUrl: '',
-      ageRangePreference: '',
-      seekingPreference: '',
-      genderPreference: '',
-      locationPreference: '',
+      preferences: {
+        ageRange: '',
+        seeking: '',
+        gender: '',
+        location: '',
+      },
     },
   });
 
   useEffect(() => {
-    if (profileCard && isOpen) {
-      form.reset({
-        friendName: profileCard.friendName,
-        friendEmail: profileCard.friendEmail || '',
-        bio: profileCard.bio,
-        interests: profileCard.interests.join(', '),
-        photoUrl: profileCard.photoUrl || '',
-        ageRangePreference: profileCard.preferences?.ageRange || '',
-        seekingPreference: profileCard.preferences?.seeking || '',
-        genderPreference: profileCard.preferences?.gender || '',
-        locationPreference: profileCard.preferences?.location || '',
-      });
-    } else if (!profileCard && isOpen) {
-      form.reset({ // Reset to defaults for new card
-        friendName: '',
-        friendEmail: '',
-        bio: '',
-        interests: [],
-        photoUrl: '',
-        ageRangePreference: '',
-        seekingPreference: '',
-        genderPreference: '',
-        locationPreference: '',
-      });
+    if (isOpen) {
+        if (profileCard) {
+            form.reset({
+                friendName: profileCard.friendName,
+                friendEmail: profileCard.friendEmail || '',
+                bio: profileCard.bio,
+                interests: profileCard.interests.join(', '),
+                photoUrl: profileCard.photoUrl || '',
+                preferences: {
+                    ageRange: profileCard.preferences?.ageRange || '',
+                    seeking: profileCard.preferences?.seeking || '',
+                    gender: profileCard.preferences?.gender || '',
+                    location: profileCard.preferences?.location || '',
+                },
+            });
+        } else {
+            form.reset({ 
+                friendName: '',
+                friendEmail: '',
+                bio: '',
+                interests: '', // Reset as string for form input
+                photoUrl: '',
+                preferences: {
+                    ageRange: '',
+                    seeking: '',
+                    gender: '',
+                    location: '',
+                },
+            });
+        }
     }
   }, [profileCard, isOpen, form]);
 
@@ -92,36 +102,32 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
     }
     setIsSubmitting(true);
 
-    const newOrUpdatedProfileCard: ProfileCard = {
-      id: profileCard?.id || `pc-${Date.now()}`,
-      createdByMatcherId: currentUser.id,
-      matcherName: currentUser.name,
-      friendName: data.friendName,
-      friendEmail: data.friendEmail,
-      bio: data.bio,
-      interests: data.interests, // Already transformed to array
-      photoUrl: data.photoUrl,
-      preferences: {
-        ageRange: data.ageRangePreference,
-        seeking: data.seekingPreference,
-        gender: data.genderPreference,
-        location: data.locationPreference,
-      },
-      createdAt: profileCard?.createdAt || new Date().toISOString(),
+    const dataToSave = {
+        friendName: data.friendName,
+        friendEmail: data.friendEmail,
+        bio: data.bio,
+        interests: data.interests, // Zod already transformed this to string[]
+        photoUrl: data.photoUrl,
+        preferences: data.preferences || {}, // Ensure preferences object exists
     };
 
-    // Simulate API call
-    setTimeout(() => {
-      onSave(newOrUpdatedProfileCard);
-      toast({ title: `Profile Card ${profileCard ? 'Updated' : 'Created'}!`, description: `${data.friendName}'s profile is ready.` });
-      setIsSubmitting(false);
-      // onClose(); // onSave should handle closing via parent state
-    }, 1000);
+    try {
+        await onSave(dataToSave);
+        toast({ title: `Profile Card ${profileCard ? 'Updated' : 'Created'}!`, description: `${data.friendName}'s profile is ready.` });
+    } catch (error) {
+        console.error("Error in onSave callback:", error);
+        toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the profile card.'});
+    } finally {
+        setIsSubmitting(false);
+        // Parent component's onSave handler is now responsible for closing the modal
+    }
   };
   
   const handleDialogClose = () => {
-    form.reset(); // Clear form on close
-    onClose();
+    if (!isSubmitting) { // Prevent reset if a submission is in progress
+        form.reset(); 
+        onClose();
+    }
   };
 
   if (!currentUser) return null;
@@ -176,7 +182,7 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
             />
             <FormField
               control={form.control}
-              name="interests"
+              name="interests" // Field expects string input, Zod transforms to array
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="font-body">Interests</FormLabel>
@@ -198,10 +204,10 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
               )}
             />
 
-            <h3 className="font-headline text-lg text-primary pt-2">Matching Preferences</h3>
+            <h3 className="font-headline text-lg text-primary pt-2">Matching Preferences (Optional)</h3>
             <FormField
               control={form.control}
-              name="ageRangePreference"
+              name="preferences.ageRange"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="font-body">Preferred Age Range</FormLabel>
@@ -212,7 +218,7 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
             />
             <FormField
               control={form.control}
-              name="seekingPreference"
+              name="preferences.seeking"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="font-body">What They're Seeking</FormLabel>
@@ -223,7 +229,7 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
             />
              <FormField
               control={form.control}
-              name="genderPreference"
+              name="preferences.gender"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="font-body">Interested In (Gender)</FormLabel>
@@ -234,7 +240,7 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
             />
              <FormField
               control={form.control}
-              name="locationPreference"
+              name="preferences.location"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="font-body">Preferred Location/Proximity</FormLabel>
@@ -244,7 +250,7 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
               )}
             />
             <DialogFooter className="sm:justify-between pt-4">
-              <Button type="button" variant="outline" onClick={handleDialogClose} className="border-muted text-muted-foreground hover:bg-muted/20">
+              <Button type="button" variant="outline" onClick={handleDialogClose} className="border-muted text-muted-foreground hover:bg-muted/20" disabled={isSubmitting}>
                 <X className="mr-2 h-4 w-4" /> Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary/90 text-primary-foreground">

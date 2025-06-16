@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMockPotentialMatches, saveMockPotentialMatch, getMockProfileCards, mockUserProfiles } from '@/lib/mockData';
+import { getPotentialMatchById, updatePotentialMatch, getProfileCardById } from '@/lib/firestoreService';
+import { mockUserProfiles } from '@/lib/mockData'; // For Matcher names if not on PotentialMatch
 import type { PotentialMatch, ProfileCard, UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,59 +14,78 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, ArrowLeft, UserCircle, Users, ThumbsUp, ThumbsDown, Mail, MessageSquare, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
+
 
 export default function PotentialMatchDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   const potentialMatchId = params.potentialMatchId as string;
 
   const [potentialMatch, setPotentialMatch] = useState<PotentialMatch | null>(null);
   const [profileCardA, setProfileCardA] = useState<ProfileCard | null>(null);
   const [profileCardB, setProfileCardB] = useState<ProfileCard | null>(null);
+  // Matcher profiles can be fetched or taken from mockUserProfiles for display
   const [matcherA, setMatcherA] = useState<UserProfile | null>(null);
   const [matcherB, setMatcherB] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (potentialMatchId && currentUser) {
-      setIsLoading(true);
-      const allPotentialMatches = getMockPotentialMatches();
-      const match = allPotentialMatches.find(pm => pm.id === potentialMatchId);
+    async function fetchMatchDetails() {
+      if (potentialMatchId && currentUser) {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const match = await getPotentialMatchById(potentialMatchId);
 
-      if (!match) {
-        setError("Potential match not found.");
-        setIsLoading(false);
-        return;
+          if (!match) {
+            setError("Potential match not found.");
+            setIsLoading(false);
+            return;
+          }
+
+          if (match.matcherAId !== currentUser.id && match.matcherBId !== currentUser.id) {
+            setError("You do not have permission to view this match.");
+            setIsLoading(false);
+            return;
+          }
+          setPotentialMatch(match);
+
+          const [cardA, cardB] = await Promise.all([
+            getProfileCardById(match.profileCardAId),
+            getProfileCardById(match.profileCardBId)
+          ]);
+
+          setProfileCardA(cardA || null);
+          setProfileCardB(cardB || null);
+
+          // For displaying matcher names, try finding them in mockUserProfiles
+          // In a full system, these would be User objects fetched from a 'users' collection
+          const mUserA = mockUserProfiles.find(u => u.id === match.matcherAId);
+          const mUserB = mockUserProfiles.find(u => u.id === match.matcherBId);
+          setMatcherA(mUserA || null);
+          setMatcherB(mUserB || null);
+
+
+          if (!cardA || !cardB) { // Removed mUserA and mUserB check as they are display-only from mock
+            setError("Could not load all profile card details for this match.");
+          }
+
+        } catch (err: any) {
+            console.error("Error fetching match details:", err);
+            setError(err.message || "Failed to load match details.");
+        } finally {
+            setIsLoading(false);
+        }
       }
-
-      if (match.matcherAId !== currentUser.id && match.matcherBId !== currentUser.id) {
-        setError("You do not have permission to view this match.");
-        setIsLoading(false);
-        return;
-      }
-
-      setPotentialMatch(match);
-      const allProfileCards = getMockProfileCards();
-      const cardA = allProfileCards.find(pc => pc.id === match.profileCardAId);
-      const cardB = allProfileCards.find(pc => pc.id === match.profileCardBId);
-      setProfileCardA(cardA || null);
-      setProfileCardB(cardB || null);
-
-      const mUserA = mockUserProfiles.find(u => u.id === match.matcherAId);
-      const mUserB = mockUserProfiles.find(u => u.id === match.matcherBId);
-      setMatcherA(mUserA || null);
-      setMatcherB(mUserB || null);
-
-      if (!cardA || !cardB || !mUserA || !mUserB) {
-        setError("Could not load all details for this match. Some referenced profiles or matchers may be missing.");
-      }
-      setIsLoading(false);
     }
+    fetchMatchDetails();
   }, [potentialMatchId, currentUser]);
 
-  const handleUpdateMatchStatus = (newStatus: 'accepted' | 'rejected') => {
+  const handleUpdateMatchStatus = async (newStatus: 'accepted' | 'rejected') => {
     if (!potentialMatch || !currentUser) return;
 
     const currentUsersRoleInMatch: 'A' | 'B' | null = 
@@ -82,14 +102,18 @@ export default function PotentialMatchDetailPage() {
     }
     updatedMatch.updatedAt = new Date().toISOString();
 
-    saveMockPotentialMatch(updatedMatch); // Save to managed mock data
-    setPotentialMatch(updatedMatch); 
+    try {
+        await updatePotentialMatch(updatedMatch); // Save to Firestore
+        setPotentialMatch(updatedMatch); 
+        toast({title: "Match Status Updated!", description: `Your decision has been recorded as ${newStatus}.`});
 
-    console.log(`Match ${potentialMatch.id} status updated by Matcher ${currentUsersRoleInMatch} to ${newStatus}`);
-
-    if (updatedMatch.statusMatcherA === 'accepted' && updatedMatch.statusMatcherB === 'accepted') {
-      console.log("Both matchers accepted! Time to notify the friends (pcA and pcB).");
-      // Future: Implement notification logic
+        if (updatedMatch.statusMatcherA === 'accepted' && updatedMatch.statusMatcherB === 'accepted') {
+            toast({title: "It's a Match!", description: "Both matchmakers have accepted. The next step is notifying the friends."});
+            // Future: Implement notification logic
+        }
+    } catch (error) {
+        console.error("Error updating match status:", error);
+        toast({variant: "destructive", title: "Update Failed", description: "Could not update match status."});
     }
   };
 
@@ -121,13 +145,18 @@ export default function PotentialMatchDetailPage() {
     );
   }
 
-  if (!potentialMatch || !profileCardA || !profileCardB || !matcherA || !matcherB || !currentUser) {
-    return <Alert variant="destructive" className="max-w-xl mx-auto">Invalid match data. Please try again.</Alert>;
+  if (!potentialMatch || !profileCardA || !profileCardB || !currentUser) { // Removed !matcherA || !matcherB as they are for display from mock
+    return <Alert variant="destructive" className="max-w-xl mx-auto">Invalid or incomplete match data. Please try again.</Alert>;
   }
   
   const currentMatchersDecision = potentialMatch.matcherAId === currentUser.id ? potentialMatch.statusMatcherA : potentialMatch.statusMatcherB;
   const otherMatchersDecision = potentialMatch.matcherAId === currentUser.id ? potentialMatch.statusMatcherB : potentialMatch.statusMatcherA;
-  const otherMatcher = potentialMatch.matcherAId === currentUser.id ? matcherB : matcherA;
+  
+  // Use matcher names directly from ProfileCard objects if available, otherwise fallback to mockUserProfiles
+  const nameMatcherA = profileCardA.matcherName || matcherA?.name || 'Matcher A';
+  const nameMatcherB = profileCardB.matcherName || matcherB?.name || 'Matcher B';
+  const otherMatcherName = potentialMatch.matcherAId === currentUser.id ? nameMatcherB : nameMatcherA;
+
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -160,7 +189,7 @@ export default function PotentialMatchDetailPage() {
 
           <div className="grid md:grid-cols-2 gap-6 items-start">
             {[profileCardA, profileCardB].map((card, index) => {
-              const owningMatcher = index === 0 ? matcherA : matcherB;
+              const owningMatcherName = index === 0 ? nameMatcherA : nameMatcherB;
               return (
                 <Card key={card.id} className="h-full flex flex-col">
                   <CardHeader className="items-center text-center bg-card">
@@ -170,7 +199,7 @@ export default function PotentialMatchDetailPage() {
                     </Avatar>
                     <CardTitle className="font-headline text-2xl text-primary">{card.friendName}</CardTitle>
                     <CardDescription className="font-body text-xs text-muted-foreground">
-                      Profile Card by: {owningMatcher.name}
+                      Profile Card by: {owningMatcherName}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3 flex-grow text-sm">
@@ -212,8 +241,8 @@ export default function PotentialMatchDetailPage() {
                 </div>
                 <div className="flex justify-between items-center p-3 bg-card rounded-md shadow-sm">
                      <div>
-                        <p className="font-semibold text-foreground">{otherMatcher.name}'s decision</p>
-                        <p className="text-xs text-muted-foreground">Matcher for {potentialMatch.matcherAId === otherMatcher.id ? profileCardA.friendName : profileCardB.friendName}</p>
+                        <p className="font-semibold text-foreground">{otherMatcherName}'s decision</p>
+                        <p className="text-xs text-muted-foreground">Matcher for {potentialMatch.matcherAId === currentUser.id ? profileCardB.friendName : profileCardA.friendName}</p>
                     </div>
                     {getStatusBadge(otherMatchersDecision)}
                 </div>
@@ -247,7 +276,7 @@ export default function PotentialMatchDetailPage() {
                     This email notification step is not yet implemented.
                 </AlertDescription>
                 <div className="mt-3">
-                    <Button variant="outline" size="sm" className="border-green-600 text-green-700 hover:bg-green-600/10">
+                    <Button variant="outline" size="sm" className="border-green-600 text-green-700 hover:bg-green-600/10" onClick={() => toast({title: "Notification Simulated", description: "Email to friends would be sent here."})}>
                         <Mail className="mr-2 h-4 w-4" /> (Simulate) Notify Friends
                     </Button>
                 </div>

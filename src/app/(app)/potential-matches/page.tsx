@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMockPotentialMatches, getMockProfileCards } from '@/lib/mockData';
+import { getPotentialMatchesByMatcher, getProfileCardById } from '@/lib/firestoreService';
 import type { PotentialMatch, ProfileCard } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,33 +19,51 @@ export default function PotentialMatchesPage() {
   const { currentUser, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [relevantMatches, setRelevantMatches] = useState<PotentialMatch[]>([]);
+  // Store ProfileCards in a map for quick lookup after fetching
   const [profileCardMap, setProfileCardMap] = useState<Record<string, ProfileCard>>({});
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && currentUser) {
-      if (currentUser.role !== USER_ROLES.RECOMMENDER) {
-        router.push('/dashboard'); 
-        return;
+    async function fetchData() {
+      if (!authLoading && currentUser) {
+        if (currentUser.role !== USER_ROLES.RECOMMENDER) {
+          router.push('/dashboard'); 
+          return;
+        }
+        
+        setIsLoadingData(true);
+        try {
+          const userMatches = await getPotentialMatchesByMatcher(currentUser.id);
+          userMatches.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setRelevantMatches(userMatches);
+
+          // Fetch all unique profile card IDs from these matches
+          const profileCardIds = new Set<string>();
+          userMatches.forEach(match => {
+            profileCardIds.add(match.profileCardAId);
+            profileCardIds.add(match.profileCardBId);
+          });
+
+          const cardMap: Record<string, ProfileCard> = {};
+          for (const id of Array.from(profileCardIds)) {
+            const card = await getProfileCardById(id);
+            if (card) {
+              cardMap[id] = card;
+            }
+          }
+          setProfileCardMap(cardMap);
+
+        } catch (error) {
+            console.error("Error fetching potential matches or profile cards:", error);
+        } finally {
+            setIsLoadingData(false);
+        }
+
+      } else if (!authLoading && !currentUser) {
+        router.push('/auth/login');
       }
-      
-      const allPotentialMatches = getMockPotentialMatches();
-      const userMatches = allPotentialMatches.filter(
-        pm => pm.matcherAId === currentUser.id || pm.matcherBId === currentUser.id
-      ).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setRelevantMatches(userMatches);
-
-      const allProfileCards = getMockProfileCards();
-      const cardMap: Record<string, ProfileCard> = {};
-      allProfileCards.forEach(card => {
-        cardMap[card.id] = card;
-      });
-      setProfileCardMap(cardMap);
-      setIsLoadingData(false);
-
-    } else if (!authLoading && !currentUser) {
-      router.push('/auth/login');
     }
+    fetchData();
   }, [currentUser, authLoading, router]);
 
   const getInitials = (name?: string) => name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
@@ -53,13 +71,13 @@ export default function PotentialMatchesPage() {
   const getStatusForMatcher = (match: PotentialMatch, matcherId: string): 'pending' | 'accepted' | 'rejected' => {
     if (match.matcherAId === matcherId) return match.statusMatcherA;
     if (match.matcherBId === matcherId) return match.statusMatcherB;
-    return 'pending';
+    return 'pending'; // Should not happen if data is consistent
   };
   
   const getOtherMatcherStatus = (match: PotentialMatch, currentMatcherId: string): 'pending' | 'accepted' | 'rejected' => {
     if (match.matcherAId === currentMatcherId) return match.statusMatcherB;
     if (match.matcherBId === currentMatcherId) return match.statusMatcherA;
-    return 'pending';
+    return 'pending'; // Should not happen
   };
 
   const getStatusBadge = (status: 'pending' | 'accepted' | 'rejected') => {
@@ -80,7 +98,7 @@ export default function PotentialMatchesPage() {
     );
   }
   
-  if (!currentUser) return null;
+  if (!currentUser) return null; // Should be redirected by useEffect
 
   return (
     <div className="space-y-8">
@@ -120,8 +138,8 @@ export default function PotentialMatchesPage() {
             if (!cardA || !cardB) {
               return (
                 <Card key={match.id} className="border-destructive">
-                  <CardHeader><CardTitle>Error</CardTitle></CardHeader>
-                  <CardContent>Could not load details for match ID: {match.id}. Referenced profile card missing.</CardContent>
+                  <CardHeader><CardTitle>Error Loading Match</CardTitle></CardHeader>
+                  <CardContent>Could not load full details for match ID: {match.id}. Referenced profile card(s) missing.</CardContent>
                 </Card>
               );
             }

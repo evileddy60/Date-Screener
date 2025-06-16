@@ -1,7 +1,7 @@
 
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-// import { getFirestore, Firestore } from 'firebase/firestore'; // For later use
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 // Direct configuration object as provided
 const firebaseConfig = {
@@ -22,6 +22,6 @@ if (!getApps().length) {
 }
 
 const auth: Auth = getAuth(app);
-// const db: Firestore = getFirestore(app); // For later use
+const db: Firestore = getFirestore(app);
 
-export { app, auth /*, db */ };
+export { app, auth, db };

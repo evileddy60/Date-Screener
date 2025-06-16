@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview An AI agent that finds potential matches between Profile Cards.
+ * @fileOverview An AI agent that finds potential matches between Profile Cards stored in Firestore.
  *
  * - findPotentialMatches - A function that takes a target ProfileCard ID and finds suitable matches from other ProfileCards.
  * - FindPotentialMatchesInput - The input type for the findPotentialMatches function.
@@ -10,10 +10,15 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { getMockProfileCards, getMockPotentialMatches, saveMockPotentialMatch, mockUserProfiles } from '@/lib/mockData';
+import { 
+  getAllProfileCards, 
+  getProfileCardById, 
+  findExistingPotentialMatch, 
+  addPotentialMatch 
+} from '@/lib/firestoreService';
 import type { ProfileCard, PotentialMatch } from '@/types';
 
-// Simplified ProfileCard for prompt context, to avoid overly large prompts if many cards exist
+// Simplified ProfileCard for prompt context
 const ProfileCardPromptSchema = z.object({
   id: z.string(),
   friendName: z.string(),
@@ -46,7 +51,7 @@ const AIOutputSchema = z.object({
 });
 
 const FindPotentialMatchesOutputSchema = z.object({
-  createdPotentialMatchIds: z.array(z.string()).describe("An array of IDs of the PotentialMatch objects created and stored."),
+  createdPotentialMatchIds: z.array(z.string()).describe("An array of IDs of the PotentialMatch objects created and stored in Firestore."),
 });
 export type FindPotentialMatchesOutput = z.infer<typeof FindPotentialMatchesOutputSchema>;
 
@@ -107,16 +112,17 @@ const findPotentialMatchesFlow = ai.defineFlow(
     outputSchema: FindPotentialMatchesOutputSchema,
   },
   async (input) => {
-    const allProfileCards = getMockProfileCards();
-    const allPotentialMatches = getMockPotentialMatches();
+    const allProfileCardsFromDb = await getAllProfileCards(); // Fetch from Firestore
 
-    const targetCardFull = allProfileCards.find(pc => pc.id === input.targetProfileCardId);
+    const targetCardFull = allProfileCardsFromDb.find(pc => pc.id === input.targetProfileCardId);
     if (!targetCardFull) {
       throw new Error(`Target profile card with ID ${input.targetProfileCardId} not found.`);
     }
 
-    const candidateCardsFull = allProfileCards.filter(
-      pc => pc.id !== input.targetProfileCardId
+    // Filter out the target card and cards created by the same matcher for now
+    // A more advanced version might allow matching cards from the same matcher if they are for different friends.
+    const candidateCardsFull = allProfileCardsFromDb.filter(
+      pc => pc.id !== input.targetProfileCardId && pc.createdByMatcherId !== targetCardFull.createdByMatcherId
     );
 
     if (candidateCardsFull.length === 0) {
@@ -153,24 +159,22 @@ const findPotentialMatchesFlow = ai.defineFlow(
     const createdPotentialMatchIds: string[] = [];
 
     for (const suggestion of output.suggestions) {
-      const matchedCardFull = allProfileCards.find(pc => pc.id === suggestion.matchedProfileCardId);
+      const matchedCardFull = allProfileCardsFromDb.find(pc => pc.id === suggestion.matchedProfileCardId);
       if (!matchedCardFull) {
-        console.warn(`Suggested matched card ID ${suggestion.matchedProfileCardId} not found in mock data.`);
+        console.warn(`Suggested matched card ID ${suggestion.matchedProfileCardId} not found in fetched data.`);
         continue;
       }
 
-      const existingMatch = allPotentialMatches.find(pm =>
-        (pm.profileCardAId === targetCardFull.id && pm.profileCardBId === matchedCardFull.id) ||
-        (pm.profileCardAId === matchedCardFull.id && pm.profileCardBId === targetCardFull.id)
-      );
+      // Check if this potential match already exists in Firestore
+      const existingMatch = await findExistingPotentialMatch(targetCardFull.id, matchedCardFull.id);
 
       if (existingMatch) {
         // If a match record exists, we don't create a new one.
+        // We could potentially update it if the AI has new insights, but for now, skip.
         continue;
       }
 
-      const newPotentialMatch: PotentialMatch = {
-        id: `pm-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      const newPotentialMatchData: Omit<PotentialMatch, 'id' | 'createdAt'> = {
         profileCardAId: targetCardFull.id,
         profileCardBId: matchedCardFull.id,
         matcherAId: targetCardFull.createdByMatcherId,
@@ -179,11 +183,11 @@ const findPotentialMatchesFlow = ai.defineFlow(
         compatibilityReason: suggestion.compatibilityReason,
         statusMatcherA: 'pending',
         statusMatcherB: 'pending',
-        createdAt: new Date().toISOString(),
+        // createdAt will be set by addPotentialMatch
       };
 
-      saveMockPotentialMatch(newPotentialMatch); // Save to managed mock data
-      createdPotentialMatchIds.push(newPotentialMatch.id);
+      const createdMatch = await addPotentialMatch(newPotentialMatchData); // Save to Firestore
+      createdPotentialMatchIds.push(createdMatch.id);
     }
 
     return { createdPotentialMatchIds };
