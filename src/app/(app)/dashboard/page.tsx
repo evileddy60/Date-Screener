@@ -62,9 +62,9 @@ export default function DashboardPage() {
             </p>
           </div>
           <Image 
-            src="https://placehold.co/300x200/FFACD/FFFFFF?text=Matchmaker+Zone"
+            src="https://placehold.co/250x150/FFACD/FFFFFF"
             alt="Matchmaker illustration"
-            data-ai-hint="people connecting hearts"
+            data-ai-hint="connecting hearts"
             width={250}
             height={150}
             className="rounded-lg mt-6 md:mt-0 shadow-md object-cover"
