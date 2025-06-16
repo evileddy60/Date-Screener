@@ -7,23 +7,28 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Info, Edit, Search, CalendarDays, AtSign } from 'lucide-react'; // Changed SearchHeart to Search
+import { User, Info, Edit, Search, CalendarDays, AtSign } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useRouter } from 'next/navigation'; // Added for navigation
+import { useRouter } from 'next/navigation';
+import { mockUserProfiles } from '@/lib/mockData'; // Import mockUserProfiles
 
 interface ProfileCardDisplayProps {
   profileCard: ProfileCard;
   onEdit: () => void;
-  onFindMatch: (profileCardId: string) => void; // Changed to accept ID
+  onFindMatch: (profileCardId: string) => void;
 }
 
 export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch }: ProfileCardDisplayProps) {
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
-  const router = useRouter(); // Initialize router
+  const router = useRouter();
 
   const handleFindMatchClick = () => {
-    onFindMatch(profileCard.id); // Call parent handler which should navigate
+    onFindMatch(profileCard.id);
   };
+
+  // Find the matcher's current profile from mockUserProfiles
+  const matcherProfile = mockUserProfiles.find(user => user.id === profileCard.createdByMatcherId);
+  const displayMatcherName = matcherProfile?.name || profileCard.matcherName || 'Unknown Matcher';
 
   return (
     <Card className="shadow-lg hover:shadow-primary/20 transition-all duration-300 flex flex-col h-full">
@@ -38,7 +43,7 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch }: Profile
           <div>
             <CardTitle className="font-headline text-2xl text-primary">{profileCard.friendName}</CardTitle>
             <CardDescription className="font-body text-sm text-foreground/70 flex items-center gap-1">
-              <User className="w-3 h-3"/> Card by: {profileCard.matcherName}
+              <User className="w-3 h-3"/> Card by: {displayMatcherName} {/* Use the looked-up name */}
             </CardDescription>
              {profileCard.friendEmail && (
                 <CardDescription className="font-body text-xs text-foreground/60 flex items-center gap-1 mt-0.5">
