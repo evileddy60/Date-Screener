@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockPotentialMatches, mockProfileCards, mockUserProfiles } from '@/lib/mockData';
+import { getMockPotentialMatches, saveMockPotentialMatch, getMockProfileCards, mockUserProfiles } from '@/lib/mockData';
 import type { PotentialMatch, ProfileCard, UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,8 @@ export default function PotentialMatchDetailPage() {
   useEffect(() => {
     if (potentialMatchId && currentUser) {
       setIsLoading(true);
-      const match = mockPotentialMatches.find(pm => pm.id === potentialMatchId);
+      const allPotentialMatches = getMockPotentialMatches();
+      const match = allPotentialMatches.find(pm => pm.id === potentialMatchId);
 
       if (!match) {
         setError("Potential match not found.");
@@ -46,8 +47,9 @@ export default function PotentialMatchDetailPage() {
       }
 
       setPotentialMatch(match);
-      const cardA = mockProfileCards.find(pc => pc.id === match.profileCardAId);
-      const cardB = mockProfileCards.find(pc => pc.id === match.profileCardBId);
+      const allProfileCards = getMockProfileCards();
+      const cardA = allProfileCards.find(pc => pc.id === match.profileCardAId);
+      const cardB = allProfileCards.find(pc => pc.id === match.profileCardBId);
       setProfileCardA(cardA || null);
       setProfileCardB(cardB || null);
 
@@ -80,19 +82,14 @@ export default function PotentialMatchDetailPage() {
     }
     updatedMatch.updatedAt = new Date().toISOString();
 
-    // Update in mock data
-    const matchIndex = mockPotentialMatches.findIndex(pm => pm.id === potentialMatch.id);
-    if (matchIndex !== -1) {
-      mockPotentialMatches[matchIndex] = updatedMatch;
-      setPotentialMatch(updatedMatch); // Update local state to re-render
-      // In a real app, you'd save this to a backend.
-      console.log(`Match ${potentialMatch.id} status updated by Matcher ${currentUsersRoleInMatch} to ${newStatus}`);
+    saveMockPotentialMatch(updatedMatch); // Save to managed mock data
+    setPotentialMatch(updatedMatch); 
 
-      // Future: Trigger email notifications if both accept
-      if (updatedMatch.statusMatcherA === 'accepted' && updatedMatch.statusMatcherB === 'accepted') {
-        console.log("Both matchers accepted! Time to notify the friends (pcA and pcB).");
-        // Here you would add logic to notify friends via email.
-      }
+    console.log(`Match ${potentialMatch.id} status updated by Matcher ${currentUsersRoleInMatch} to ${newStatus}`);
+
+    if (updatedMatch.statusMatcherA === 'accepted' && updatedMatch.statusMatcherB === 'accepted') {
+      console.log("Both matchers accepted! Time to notify the friends (pcA and pcB).");
+      // Future: Implement notification logic
     }
   };
 
@@ -106,7 +103,6 @@ export default function PotentialMatchDetailPage() {
       default: return <Badge variant="secondary">Unknown</Badge>;
     }
   };
-
 
   if (isLoading) {
     return <div className="flex justify-center items-center min-h-[calc(100vh-200px)]"><Loader2 className="h-12 w-12 animate-spin text-primary" /> <p className="ml-2">Loading Match Details...</p></div>;
@@ -132,7 +128,6 @@ export default function PotentialMatchDetailPage() {
   const currentMatchersDecision = potentialMatch.matcherAId === currentUser.id ? potentialMatch.statusMatcherA : potentialMatch.statusMatcherB;
   const otherMatchersDecision = potentialMatch.matcherAId === currentUser.id ? potentialMatch.statusMatcherB : potentialMatch.statusMatcherA;
   const otherMatcher = potentialMatch.matcherAId === currentUser.id ? matcherB : matcherA;
-
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -224,7 +219,6 @@ export default function PotentialMatchDetailPage() {
                 </div>
             </CardContent>
           </Card>
-
 
           {currentMatchersDecision === 'pending' && (
             <div className="text-center space-y-3 pt-4 border-t">

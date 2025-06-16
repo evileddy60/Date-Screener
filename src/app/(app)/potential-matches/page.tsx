@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockPotentialMatches, mockProfileCards } from '@/lib/mockData';
+import { getMockPotentialMatches, getMockProfileCards } from '@/lib/mockData';
 import type { PotentialMatch, ProfileCard } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,13 +29,15 @@ export default function PotentialMatchesPage() {
         return;
       }
       
-      const userMatches = mockPotentialMatches.filter(
+      const allPotentialMatches = getMockPotentialMatches();
+      const userMatches = allPotentialMatches.filter(
         pm => pm.matcherAId === currentUser.id || pm.matcherBId === currentUser.id
-      ).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by most recent
+      ).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setRelevantMatches(userMatches);
 
+      const allProfileCards = getMockProfileCards();
       const cardMap: Record<string, ProfileCard> = {};
-      mockProfileCards.forEach(card => {
+      allProfileCards.forEach(card => {
         cardMap[card.id] = card;
       });
       setProfileCardMap(cardMap);
@@ -51,7 +53,7 @@ export default function PotentialMatchesPage() {
   const getStatusForMatcher = (match: PotentialMatch, matcherId: string): 'pending' | 'accepted' | 'rejected' => {
     if (match.matcherAId === matcherId) return match.statusMatcherA;
     if (match.matcherBId === matcherId) return match.statusMatcherB;
-    return 'pending'; // Should not happen if logic is correct
+    return 'pending';
   };
   
   const getOtherMatcherStatus = (match: PotentialMatch, currentMatcherId: string): 'pending' | 'accepted' | 'rejected' => {
@@ -69,7 +71,6 @@ export default function PotentialMatchesPage() {
     }
   };
 
-
   if (authLoading || isLoadingData) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
@@ -79,7 +80,7 @@ export default function PotentialMatchesPage() {
     );
   }
   
-  if (!currentUser) return null; // Should be handled by layout, but good practice
+  if (!currentUser) return null;
 
   return (
     <div className="space-y-8">
@@ -125,15 +126,10 @@ export default function PotentialMatchesPage() {
               );
             }
 
-            // Determine which card is "yours" and which is "theirs" from current user's perspective
             const yourCard = cardA.createdByMatcherId === currentUser.id ? cardA : cardB;
             const otherCard = cardA.createdByMatcherId === currentUser.id ? cardB : cardA;
             const yourStatus = getStatusForMatcher(match, currentUser.id);
             const otherStatus = getOtherMatcherStatus(match, currentUser.id);
-            const overallStatus = (yourStatus === 'accepted' && otherStatus === 'accepted') ? 'Both Accepted' 
-                                : (yourStatus === 'rejected' || otherStatus === 'rejected') ? 'Rejected by One or Both'
-                                : 'Pending Actions';
-
 
             return (
               <Card key={match.id} className="shadow-lg hover:shadow-primary/20 transition-all duration-300 flex flex-col">

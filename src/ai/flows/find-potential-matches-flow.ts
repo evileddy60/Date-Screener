@@ -10,7 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { mockProfileCards, mockPotentialMatches, mockUserProfiles } from '@/lib/mockData';
+import { getMockProfileCards, getMockPotentialMatches, saveMockPotentialMatch, mockUserProfiles } from '@/lib/mockData';
 import type { ProfileCard, PotentialMatch } from '@/types';
 
 // Simplified ProfileCard for prompt context, to avoid overly large prompts if many cards exist
@@ -68,7 +68,7 @@ const prompt = ai.definePrompt({
   Name: {{{targetCard.friendName}}}
   Bio: {{{targetCard.bio}}}
   Interests: {{#each targetCard.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-  Preferences: 
+  Preferences:
     Age Range: {{{targetCard.preferences.ageRange}}}
     Seeking: {{{targetCard.preferences.seeking}}}
     Gender: {{{targetCard.preferences.gender}}}
@@ -80,7 +80,7 @@ const prompt = ai.definePrompt({
     Name: {{{this.friendName}}}
     Bio: {{{this.bio}}}
     Interests: {{#each this.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-    Preferences: 
+    Preferences:
       Age Range: {{{this.preferences.ageRange}}}
       Seeking: {{{this.preferences.seeking}}}
       Gender: {{{this.preferences.gender}}}
@@ -107,22 +107,22 @@ const findPotentialMatchesFlow = ai.defineFlow(
     outputSchema: FindPotentialMatchesOutputSchema,
   },
   async (input) => {
-    const targetCardFull = mockProfileCards.find(pc => pc.id === input.targetProfileCardId);
+    const allProfileCards = getMockProfileCards();
+    const allPotentialMatches = getMockPotentialMatches();
+
+    const targetCardFull = allProfileCards.find(pc => pc.id === input.targetProfileCardId);
     if (!targetCardFull) {
       throw new Error(`Target profile card with ID ${input.targetProfileCardId} not found.`);
     }
 
-    // Filter out the target card itself and cards created by the same matcher (to avoid self-matching of own cards, for now)
-    // Or, allow matching between own cards if desired. For now, let's exclude cards by the same matcher.
-    // Update: Let's allow matching with any card not the target card itself. Cross-matcher connections are primary but internal suggestions can also be useful.
-    const candidateCardsFull = mockProfileCards.filter(
+    const candidateCardsFull = allProfileCards.filter(
       pc => pc.id !== input.targetProfileCardId
     );
 
     if (candidateCardsFull.length === 0) {
       return { createdPotentialMatchIds: [] }; // No candidates to match against
     }
-    
+
     // Transform full cards to simplified prompt schema
     const targetCardPromptData: ProfileCardPrompt = {
         id: targetCardFull.id,
@@ -153,28 +153,21 @@ const findPotentialMatchesFlow = ai.defineFlow(
     const createdPotentialMatchIds: string[] = [];
 
     for (const suggestion of output.suggestions) {
-      const matchedCardFull = mockProfileCards.find(pc => pc.id === suggestion.matchedProfileCardId);
+      const matchedCardFull = allProfileCards.find(pc => pc.id === suggestion.matchedProfileCardId);
       if (!matchedCardFull) {
         console.warn(`Suggested matched card ID ${suggestion.matchedProfileCardId} not found in mock data.`);
         continue;
       }
-      
-      // Avoid creating duplicate PotentialMatch if one already exists (simple check by card IDs)
-      const existingMatch = mockPotentialMatches.find(pm => 
+
+      const existingMatch = allPotentialMatches.find(pm =>
         (pm.profileCardAId === targetCardFull.id && pm.profileCardBId === matchedCardFull.id) ||
         (pm.profileCardAId === matchedCardFull.id && pm.profileCardBId === targetCardFull.id)
       );
 
       if (existingMatch) {
-        // console.log(`Potential match between ${targetCardFull.id} and ${matchedCardFull.id} already exists (ID: ${existingMatch.id}). Skipping creation.`);
-        // Optionally, update existingMatch with new score/reason if AI provides better insight, or just skip.
-        // For now, if it exists, we'll just add its ID to the output if it's relevant to the current search.
-        // However, the purpose of this flow is to *create new* suggestions. So, if it exists, we probably skip.
-        // Let's refine: if it exists and is still pending for the requesting matcher, perhaps we don't create a new one.
-        // For simplicity now: if a match record exists, we don't create a new one.
-        continue; 
+        // If a match record exists, we don't create a new one.
+        continue;
       }
-
 
       const newPotentialMatch: PotentialMatch = {
         id: `pm-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -184,16 +177,15 @@ const findPotentialMatchesFlow = ai.defineFlow(
         matcherBId: matchedCardFull.createdByMatcherId,
         compatibilityScore: suggestion.compatibilityScore,
         compatibilityReason: suggestion.compatibilityReason,
-        statusMatcherA: 'pending', // Status for the matcher of profileCardAId
-        statusMatcherB: 'pending', // Status for the matcher of profileCardBId
-        // Friend statuses remain undefined until matchers accept
+        statusMatcherA: 'pending',
+        statusMatcherB: 'pending',
         createdAt: new Date().toISOString(),
       };
 
-      mockPotentialMatches.push(newPotentialMatch);
+      saveMockPotentialMatch(newPotentialMatch); // Save to managed mock data
       createdPotentialMatchIds.push(newPotentialMatch.id);
     }
-    
+
     return { createdPotentialMatchIds };
   }
 );

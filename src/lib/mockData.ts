@@ -1,6 +1,7 @@
 
 import type { UserProfile, ProfileCard, PotentialMatch, MatchFeedback } from '@/types';
 
+// UserProfiles are typically static in this mock setup or managed by AuthContext/localStorage separately
 export const mockUserProfiles: UserProfile[] = [
   {
     id: 'matcher1',
@@ -20,7 +21,7 @@ export const mockUserProfiles: UserProfile[] = [
   },
   {
     id: 'matcher3',
-    email: 'recommender@example.com', 
+    email: 'recommender@example.com',
     name: 'Maria Garcia',
     role: 'recommender',
     bio: "Hoping to help my friends find their special someone. I have a good intuition for these things!",
@@ -28,10 +29,14 @@ export const mockUserProfiles: UserProfile[] = [
   },
 ];
 
-export const mockProfileCards: ProfileCard[] = [
+const PROFILE_CARDS_STORAGE_KEY = 'dateScreenerProfileCards_v1';
+const POTENTIAL_MATCHES_STORAGE_KEY = 'dateScreenerPotentialMatches_v1';
+
+// --- Initial Default Data ---
+const initialDefaultProfileCards: ProfileCard[] = [
   {
     id: 'pc1',
-    createdByMatcherId: 'matcher1', 
+    createdByMatcherId: 'matcher1',
     matcherName: 'Sarah Miller',
     friendName: 'Alex Johnson',
     friendEmail: 'alex.johnson.friend@example.com',
@@ -43,7 +48,7 @@ export const mockProfileCards: ProfileCard[] = [
   },
   {
     id: 'pc2',
-    createdByMatcherId: 'matcher2', 
+    createdByMatcherId: 'matcher2',
     matcherName: 'David Chen',
     friendName: 'Jamie Lee',
     friendEmail: 'jamie.lee.friend@example.com',
@@ -55,7 +60,7 @@ export const mockProfileCards: ProfileCard[] = [
   },
   {
     id: 'pc3',
-    createdByMatcherId: 'matcher1', 
+    createdByMatcherId: 'matcher1',
     matcherName: 'Sarah Miller',
     friendName: 'Chris Davis',
     friendEmail: 'chris.davis.friend@example.com',
@@ -67,7 +72,7 @@ export const mockProfileCards: ProfileCard[] = [
   },
    {
     id: 'pc4',
-    createdByMatcherId: 'matcher3', 
+    createdByMatcherId: 'matcher3',
     matcherName: 'Maria Garcia',
     friendName: 'Diana Prince',
     friendEmail: 'diana.prince.friend@example.com',
@@ -90,27 +95,81 @@ export const mockProfileCards: ProfileCard[] = [
     createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
   }
 ];
+const initialDefaultPotentialMatches: PotentialMatch[] = [];
 
-// PotentialMatches will be populated by the AI flow.
-// This can start empty or with a few examples if needed for initial UI testing.
-export const mockPotentialMatches: PotentialMatch[] = [
-  // Example: AI suggests Alex (pc1) and Jamie (pc2) might be a good match.
-  // Sarah (matcher1) and David (matcher2) would need to approve this.
-  /*
-  {
-    id: 'pm_example_1',
-    profileCardAId: 'pc1', 
-    profileCardBId: 'pc2',
-    matcherAId: 'matcher1',
-    matcherBId: 'matcher2',
-    compatibilityScore: 85,
-    compatibilityReason: "Shared interests in creative pursuits (music, art, coffee) and meaningful connections. Complementary personalities observed from bios. Both in NYC.",
-    statusMatcherA: 'pending',
-    statusMatcherB: 'pending',
-    createdAt: new Date(Date.now() - 86400000 * 0.5).toISOString(), // Half a day ago
+// --- In-memory state variables ---
+let _profileCards: ProfileCard[];
+let _potentialMatches: PotentialMatch[];
+
+// --- Helper functions for localStorage ---
+function loadDataFromLocalStorage<T>(key: string, defaultData: T[]): T[] {
+  if (typeof window !== 'undefined') {
+    try {
+      const storedData = localStorage.getItem(key);
+      if (storedData) {
+        return JSON.parse(storedData);
+      } else {
+        // If no data in localStorage, store the defaults and return them
+        localStorage.setItem(key, JSON.stringify(defaultData));
+        return [...defaultData]; // Return a copy of defaults
+      }
+    } catch (error) {
+      console.error(`Error loading data for ${key} from localStorage:`, error);
+      // Fallback to default if parsing fails or other errors
+      return [...defaultData]; // Return a copy of defaults
+    }
   }
-  */
-];
+  // For server-side rendering or non-browser environments, return defaults
+  return [...defaultData]; // Return a copy of defaults
+}
 
-export const mockMatchFeedback: MatchFeedback[] = [
-];
+function saveDataToLocalStorage<T>(key: string, data: T[]): void {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (error) {
+      console.error(`Error saving data for ${key} to localStorage:`, error);
+    }
+  }
+}
+
+// --- Initialize data ---
+// This block will run once when the module is first imported.
+_profileCards = loadDataFromLocalStorage<ProfileCard>(PROFILE_CARDS_STORAGE_KEY, initialDefaultProfileCards);
+_potentialMatches = loadDataFromLocalStorage<PotentialMatch>(POTENTIAL_MATCHES_STORAGE_KEY, initialDefaultPotentialMatches);
+
+
+// --- Exported functions for Profile Cards ---
+export function getMockProfileCards(): ProfileCard[] {
+  // Return a copy to prevent accidental direct mutation of the internal array
+  return [..._profileCards];
+}
+
+export function saveMockProfileCard(card: ProfileCard): void {
+  const index = _profileCards.findIndex(c => c.id === card.id);
+  if (index !== -1) {
+    _profileCards[index] = card; // Update existing
+  } else {
+    _profileCards.push(card); // Add new
+  }
+  saveDataToLocalStorage<ProfileCard>(PROFILE_CARDS_STORAGE_KEY, _profileCards);
+}
+
+// --- Exported functions for Potential Matches ---
+export function getMockPotentialMatches(): PotentialMatch[] {
+  // Return a copy
+  return [..._potentialMatches];
+}
+
+export function saveMockPotentialMatch(match: PotentialMatch): void {
+  const index = _potentialMatches.findIndex(m => m.id === match.id);
+  if (index !== -1) {
+    _potentialMatches[index] = match; // Update existing
+  } else {
+    _potentialMatches.push(match); // Add new
+  }
+  saveDataToLocalStorage<PotentialMatch>(POTENTIAL_MATCHES_STORAGE_KEY, _potentialMatches);
+}
+
+// MockMatchFeedback is not persisted to localStorage in this iteration
+export const mockMatchFeedback: MatchFeedback[] = [];

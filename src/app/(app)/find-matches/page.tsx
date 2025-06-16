@@ -7,12 +7,12 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { findPotentialMatches } from '@/ai/flows/find-potential-matches-flow';
 import type { FindPotentialMatchesOutput } from '@/ai/flows/find-potential-matches-flow';
-import { mockProfileCards, mockPotentialMatches, mockUserProfiles } from '@/lib/mockData';
+import { getMockProfileCards, getMockPotentialMatches, mockUserProfiles } from '@/lib/mockData';
 import type { ProfileCard, PotentialMatch, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Sparkles, ArrowLeft, ArrowRight, Info, Users, Search, Gift, AlertTriangle } from 'lucide-react'; // Changed SearchHeart to Search, Added AlertTriangle
+import { Loader2, Sparkles, ArrowLeft, ArrowRight, Info, Users, Search, Gift, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 
@@ -34,8 +34,8 @@ function FindMatchesContent() {
       setIsLoading(false);
       return;
     }
-
-    const card = mockProfileCards.find(pc => pc.id === targetProfileCardId);
+    const allProfileCards = getMockProfileCards();
+    const card = allProfileCards.find(pc => pc.id === targetProfileCardId);
     if (!card) {
       setError("Target profile card not found.");
       setIsLoading(false);
@@ -57,8 +57,9 @@ function FindMatchesContent() {
           requestingMatcherId: currentUser.id 
         });
         
+        const allPotentialMatches = getMockPotentialMatches();
         const newMatches = result.createdPotentialMatchIds
-          .map(id => mockPotentialMatches.find(pm => pm.id === id))
+          .map(id => allPotentialMatches.find(pm => pm.id === id))
           .filter(pm => pm !== undefined) as PotentialMatch[];
         
         setSuggestedMatches(newMatches);
@@ -114,6 +115,8 @@ function FindMatchesContent() {
     // This case should ideally be covered by error state, but as a fallback:
     return <p className="text-center font-body text-lg">Profile card not found.</p>;
   }
+  
+  const allProfileCards = getMockProfileCards(); // Get latest for display
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -124,7 +127,7 @@ function FindMatchesContent() {
       <Card className="shadow-xl">
         <CardHeader className="text-center bg-gradient-to-r from-primary/10 via-background to-secondary/10 p-6">
             <div className="mx-auto bg-primary/20 p-3 rounded-full w-fit mb-3">
-                 <Search className="h-10 w-10 text-primary" /> {/* Changed SearchHeart to Search */}
+                 <Search className="h-10 w-10 text-primary" />
             </div>
           <CardTitle className="font-headline text-3xl text-primary">Finding Matches for {targetProfileCard.friendName}</CardTitle>
           <CardDescription className="font-body text-foreground/80">
@@ -178,7 +181,7 @@ function FindMatchesContent() {
               <h2 className="font-headline text-2xl text-foreground text-center">AI's Top Suggestions for {targetProfileCard.friendName}</h2>
               <div className="grid md:grid-cols-2 gap-6">
                 {suggestedMatches.map(pm => {
-                  const matchedCard = mockProfileCards.find(pc => pc.id === (pm.profileCardAId === targetProfileCardId ? pm.profileCardBId : pm.profileCardAId));
+                  const matchedCard = allProfileCards.find(pc => pc.id === (pm.profileCardAId === targetProfileCardId ? pm.profileCardBId : pm.profileCardAId));
                   const matchedCardOwner = mockUserProfiles.find(user => user.id === matchedCard?.createdByMatcherId);
 
                   if (!matchedCard) return null;

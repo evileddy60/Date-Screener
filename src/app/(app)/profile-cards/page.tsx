@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockProfileCards } from '@/lib/mockData'; 
+import { getMockProfileCards, saveMockProfileCard } from '@/lib/mockData';
 import type { ProfileCard as ProfileCardType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ProfileCardDisplay } from '@/components/profile-cards/ProfileCardDisplay';
@@ -28,8 +28,8 @@ export default function ProfileCardsPage() {
         router.push('/dashboard');
         return;
       }
-      // Simulate fetching profile cards created by the current matcher
-      const cards = mockProfileCards.filter(card => card.createdByMatcherId === currentUser.id);
+      const allCards = getMockProfileCards();
+      const cards = allCards.filter(card => card.createdByMatcherId === currentUser.id);
       setMyProfileCards(cards);
       setIsLoadingData(false);
     } else if (!authLoading && !currentUser) {
@@ -53,18 +53,13 @@ export default function ProfileCardsPage() {
   };
   
   const handleProfileCardSaved = (savedCard: ProfileCardType) => {
-    if (!currentUser) return; 
+    if (!currentUser) return;
 
-    // First, update the mockProfileCards array (our source of truth for the session)
-    const mockIndex = mockProfileCards.findIndex(c => c.id === savedCard.id);
-    if (mockIndex !== -1) {
-        mockProfileCards[mockIndex] = savedCard; // Update existing
-    } else {
-        mockProfileCards.push(savedCard); // Add new
-    }
+    saveMockProfileCard(savedCard); // Save to mockData (which now handles localStorage)
 
-    // Then, re-filter from the updated mockProfileCards to update the local state
-    const updatedUserCards = mockProfileCards.filter(
+    // Re-filter from the source to update the local state
+    const allCards = getMockProfileCards();
+    const updatedUserCards = allCards.filter(
       card => card.createdByMatcherId === currentUser.id
     );
     setMyProfileCards(updatedUserCards);
