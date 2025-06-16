@@ -8,15 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { USER_ROLES } from '@/lib/constants';
-import { UserPlus, Sparkles, Loader2 } from 'lucide-react'; // Added Loader2
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription }
+from "@/components/ui/alert";
+import { UserPlus, Sparkles, Loader2, Info } from 'lucide-react';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState(''); 
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { signupUser, isLoading } = useAuth(); // Updated to signupUser and added isLoading
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const { signupUser, isLoading } = useAuth();
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,9 +37,12 @@ export default function SignupPage() {
       setError('Password must be at least 6 characters long.');
       return;
     }
+    if (!agreedToTerms) {
+      setError('You must agree to the terms and conditions to sign up.');
+      return;
+    }
     
     await signupUser(email, password, name);
-    // Firebase errors will be handled by toast in AuthContext
   };
 
   return (
@@ -104,8 +110,37 @@ export default function SignupPage() {
                 disabled={isLoading}
               />
             </div>
+
+            <Alert variant="default" className="bg-secondary/20 border-secondary/30">
+              <Info className="h-4 w-4 text-secondary-foreground" />
+              <AlertDescription className="font-body text-xs text-secondary-foreground/80 space-y-1">
+                <p>Date Screener is not legally responsible for users using the app maliciously.</p>
+                <p>You must have permission from the individual before creating a Profile Card for them.</p>
+                <p>Matches are not a guarantee that the people will even like each other; this is just to help single people find suitable partners with the help of their friends screening people.</p>
+              </AlertDescription>
+            </Alert>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="terms" 
+                checked={agreedToTerms} 
+                onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                disabled={isLoading}
+              />
+              <Label
+                htmlFor="terms"
+                className="font-body text-sm text-foreground/80 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                I have read and agree to the terms and conditions.
+              </Label>
+            </div>
+
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body text-lg py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body text-lg py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105" 
+              disabled={isLoading || !agreedToTerms}
+            >
               {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <UserPlus className="mr-2 h-5 w-5" />}
               Sign Up as a Matchmaker
             </Button>
