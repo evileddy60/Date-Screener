@@ -125,9 +125,6 @@ export default function ProfileCardsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="text-center sm:text-left">
             <h1 className="font-headline text-4xl font-semibold text-primary">My Profile Cards</h1>
-            <p className="font-body text-lg text-foreground/80 mt-2">
-            Manage the profiles of your single friends. Create new cards or edit existing ones.
-            </p>
         </div>
         <Button onClick={handleOpenCreateModal} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md">
           <PlusCircle className="mr-2 h-5 w-5" /> Create New Profile Card
