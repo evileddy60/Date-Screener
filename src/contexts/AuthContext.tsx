@@ -15,16 +15,17 @@ import {
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 import { mockUserProfiles } from '@/lib/mockData'; // Still needed for other user's data temporarily
-import { generateUniqueAvatarSvgDataUri } from '@/lib/utils'; // Import new avatar generator
+import { generateUniqueAvatarSvgDataUri } from '@/lib/utils'; 
 
 interface AuthContextType {
   currentUser: UserProfile | null;
-  firebaseUser: FirebaseUser | null; // Expose Firebase user object if needed
+  firebaseUser: FirebaseUser | null; 
   isAuthenticated: boolean;
-  loginUser: (email: string, password_unused?: string) => Promise<void>; // Password will be used by Firebase
-  signupUser: (email: string, password_unused?: string, name?: string) => Promise<void>; // Password will be used by Firebase
+  loginUser: (email: string, password_unused?: string) => Promise<void>; 
+  signupUser: (email: string, password_unused?: string, name?: string) => Promise<void>; 
   logoutUser: () => Promise<void>;
   isLoading: boolean;
+  updateUserProfile: (updatedProfile: UserProfile) => void; // Added this line
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,8 +61,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setFirebaseUser(null);
         setCurrentUser(null);
-        // Attempt to get activeFirebaseUserId before it's cleared, if needed for specific profile removal
-        // However, a simple full clear or specific key removal is usually fine on logout.
         const activeId = localStorage.getItem('activeFirebaseUserId');
         if (activeId) {
             localStorage.removeItem(`userProfile-${activeId}`);
@@ -79,15 +78,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password_for_firebase);
       const fbUser = userCredential.user;
-      // The onAuthStateChanged listener will handle setting firebaseUser and currentUser from localStorage
-      // We just need to ensure activeFirebaseUserId is set.
       localStorage.setItem('activeFirebaseUserId', fbUser.uid);
+      // onAuthStateChanged will handle setting currentUser from localStorage
       router.push('/dashboard');
       toast({ title: "Login Successful", description: "Welcome back!" });
     } catch (error: any) {
       console.error("Firebase login error:", error);
       toast({ variant: "destructive", title: "Login Failed", description: error.message || "Invalid credentials." });
-      // No need to setCurrentUser(null) here, onAuthStateChanged handles it if auth state is truly null
     } finally {
       setIsLoading(false);
     }
@@ -108,12 +105,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         photoUrl: generateUniqueAvatarSvgDataUri(fbUser.uid),
       };
       
-      // onAuthStateChanged will set firebaseUser. Here we set currentUser and store it.
-      setCurrentUser(newUserProfile);
-      localStorage.setItem(`userProfile-${fbUser.uid}`, JSON.stringify(newUserProfile));
+      setCurrentUser(newUserProfile); // Set in context
+      localStorage.setItem(`userProfile-${fbUser.uid}`, JSON.stringify(newUserProfile)); // Set in localStorage
       localStorage.setItem('activeFirebaseUserId', fbUser.uid);
       
-      // Update mockUserProfiles if it's still being used for any other part (e.g., displaying other users)
       const existingMockUserIndex = mockUserProfiles.findIndex(p => p.email === newUserProfile.email);
       if (existingMockUserIndex === -1) {
           mockUserProfiles.push(newUserProfile);
@@ -126,7 +121,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Firebase signup error:", error);
       toast({ variant: "destructive", title: "Signup Failed", description: error.message || "Could not create account." });
-      // No need to setCurrentUser(null) here, onAuthStateChanged handles it
     } finally {
       setIsLoading(false);
     }
@@ -135,10 +129,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logoutUser = async () => {
     setIsLoading(true);
     try {
-      // The onAuthStateChanged listener will clear firebaseUser, currentUser, 
-      // and remove userProfile from localStorage. We just call signOut.
       await signOut(auth);
-      // activeFirebaseUserId is cleared by onAuthStateChanged when user becomes null
+      // onAuthStateChanged handles clearing currentUser, firebaseUser, and localStorage
       router.push('/auth/login');
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
@@ -151,12 +143,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const isAuthenticated = !!firebaseUser && !!currentUser && currentUser.role === USER_ROLES.RECOMMENDER;
 
-  // Function to allow components to update the currentUser in context and localStorage
-  // This might be used by UserProfileForm after a successful profile update
-  const updateUserProfileInContext = (updatedProfile: UserProfile) => {
+  const updateUserProfile = (updatedProfile: UserProfile) => {
     if (firebaseUser && firebaseUser.uid === updatedProfile.id) {
-      setCurrentUser(updatedProfile);
-      localStorage.setItem(`userProfile-${firebaseUser.uid}`, JSON.stringify(updatedProfile));
+      setCurrentUser(updatedProfile); // Update context state
+      localStorage.setItem(`userProfile-${firebaseUser.uid}`, JSON.stringify(updatedProfile)); // Update localStorage
     }
   };
 
@@ -167,10 +157,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isAuthenticated, 
       loginUser, 
       signupUser, 
-      logoutUser: logoutUser, 
-      isLoading 
-      // If updateUserProfileInContext is needed by other components, expose it here:
-      // updateUserProfile: updateUserProfileInContext 
+      logoutUser, 
+      isLoading,
+      updateUserProfile // Expose the new function
       }}>
       {children}
     </AuthContext.Provider>
