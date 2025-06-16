@@ -29,10 +29,10 @@ export const mockUserProfiles: UserProfile[] = [
   },
 ];
 
-const PROFILE_CARDS_STORAGE_KEY = 'dateScreenerProfileCards_v1';
-const POTENTIAL_MATCHES_STORAGE_KEY = 'dateScreenerPotentialMatches_v1';
-
 // --- Initial Default Data ---
+// These arrays will hold the "global" state of profile cards and potential matches.
+// Changes made during an app session will modify these arrays.
+// These arrays will reset to these defaults if the mockData.ts file is not updated by me and the app restarts.
 const initialDefaultProfileCards: ProfileCard[] = [
   {
     id: 'pc1',
@@ -97,52 +97,17 @@ const initialDefaultProfileCards: ProfileCard[] = [
 ];
 const initialDefaultPotentialMatches: PotentialMatch[] = [];
 
-// --- In-memory state variables ---
-let _profileCards: ProfileCard[];
-let _potentialMatches: PotentialMatch[];
 
-// --- Helper functions for localStorage ---
-function loadDataFromLocalStorage<T>(key: string, defaultData: T[]): T[] {
-  if (typeof window !== 'undefined') {
-    try {
-      const storedData = localStorage.getItem(key);
-      if (storedData) {
-        return JSON.parse(storedData);
-      } else {
-        // If no data in localStorage, store the defaults and return them
-        localStorage.setItem(key, JSON.stringify(defaultData));
-        return [...defaultData]; // Return a copy of defaults
-      }
-    } catch (error) {
-      console.error(`Error loading data for ${key} from localStorage:`, error);
-      // Fallback to default if parsing fails or other errors
-      return [...defaultData]; // Return a copy of defaults
-    }
-  }
-  // For server-side rendering or non-browser environments, return defaults
-  return [...defaultData]; // Return a copy of defaults
-}
-
-function saveDataToLocalStorage<T>(key: string, data: T[]): void {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-      console.error(`Error saving data for ${key} to localStorage:`, error);
-    }
-  }
-}
-
-// --- Initialize data ---
-// This block will run once when the module is first imported.
-_profileCards = loadDataFromLocalStorage<ProfileCard>(PROFILE_CARDS_STORAGE_KEY, initialDefaultProfileCards);
-_potentialMatches = loadDataFromLocalStorage<PotentialMatch>(POTENTIAL_MATCHES_STORAGE_KEY, initialDefaultPotentialMatches);
+// --- In-memory state variables, initialized with defaults ---
+// We create copies so that modifications to _profileCards don't affect initialDefaultProfileCards
+let _profileCards: ProfileCard[] = JSON.parse(JSON.stringify(initialDefaultProfileCards));
+let _potentialMatches: PotentialMatch[] = JSON.parse(JSON.stringify(initialDefaultPotentialMatches));
 
 
 // --- Exported functions for Profile Cards ---
 export function getMockProfileCards(): ProfileCard[] {
-  // Return a copy to prevent accidental direct mutation of the internal array
-  return [..._profileCards];
+  // Return a copy to prevent accidental direct mutation of the internal array from outside this module
+  return JSON.parse(JSON.stringify(_profileCards));
 }
 
 export function saveMockProfileCard(card: ProfileCard): void {
@@ -152,13 +117,15 @@ export function saveMockProfileCard(card: ProfileCard): void {
   } else {
     _profileCards.push(card); // Add new
   }
-  saveDataToLocalStorage<ProfileCard>(PROFILE_CARDS_STORAGE_KEY, _profileCards);
+  // No localStorage saving here. Changes are only in-memory for this module's scope.
+  // To "persist" these changes across app restarts, the initialDefaultProfileCards array
+  // at the top of this file would need to be manually updated by the developer (or AI).
 }
 
 // --- Exported functions for Potential Matches ---
 export function getMockPotentialMatches(): PotentialMatch[] {
   // Return a copy
-  return [..._potentialMatches];
+  return JSON.parse(JSON.stringify(_potentialMatches));
 }
 
 export function saveMockPotentialMatch(match: PotentialMatch): void {
@@ -168,8 +135,16 @@ export function saveMockPotentialMatch(match: PotentialMatch): void {
   } else {
     _potentialMatches.push(match); // Add new
   }
-  saveDataToLocalStorage<PotentialMatch>(POTENTIAL_MATCHES_STORAGE_KEY, _potentialMatches);
+  // No localStorage saving.
 }
 
-// MockMatchFeedback is not persisted to localStorage in this iteration
+// MockMatchFeedback is not persisted in this iteration
 export const mockMatchFeedback: MatchFeedback[] = [];
+
+// Function to reset mock data to initial defaults (useful for testing or explicit reset)
+// This would typically be called by a developer/tester, not end-users.
+export function resetMockDataToDefaults(): void {
+  _profileCards = JSON.parse(JSON.stringify(initialDefaultProfileCards));
+  _potentialMatches = JSON.parse(JSON.stringify(initialDefaultPotentialMatches));
+  console.log("Mock data has been reset to initial defaults.");
+}
