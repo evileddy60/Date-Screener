@@ -4,13 +4,13 @@
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Home, UserCircle, Users, LogOut, LogIn, UserPlus, HandHeart, Sparkles, ShieldCheck, BookUser } from 'lucide-react';
+import { Home, UserCircle, Users, LogOut, LogIn, UserPlus, ShieldCheck, BookUser, Sparkles } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { USER_ROLES } from '@/lib/constants';
 
 export function Navbar() {
-  const { currentUser, firebaseUser, logoutUser, isAuthenticated } = useAuth(); // Added firebaseUser, updated to logoutUser
+  const { currentUser, firebaseUser, logoutUser, isAuthenticated } = useAuth(); 
   const pathname = usePathname();
 
   const navLinkClass = (path: string) => 
@@ -43,9 +43,6 @@ export function Navbar() {
                 </Link>
                  <Link href="/potential-matches" className={navLinkClass("/potential-matches")}>
                   <Users className="h-4 w-4" /> Review Matches
-                </Link>
-                <Link href="/suggestions" className={navLinkClass("/suggestions")}>
-                  <Sparkles className="h-4 w-4" /> AI Tips
                 </Link>
                 <Link href="/privacy" className={navLinkClass("/privacy")}>
                   <ShieldCheck className="h-4 w-4" /> Privacy

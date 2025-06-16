@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 // Removed: import Image from 'next/image';
-import { UserCircle, BookUser, Sparkles, ShieldCheck, ArrowRight, Users, ClipboardCheck } from 'lucide-react'; 
+import { UserCircle, BookUser, ShieldCheck, ArrowRight, Users } from 'lucide-react'; 
 import { USER_ROLES } from '@/lib/constants';
 
 export default function DashboardPage() {
@@ -61,16 +61,6 @@ export default function DashboardPage() {
               Ready to create profiles for your friends and find them great matches?
             </p>
           </div>
-          {/* Removed Image component
-          <Image 
-            src="https://placehold.co/250x150/FFACD/FFFFFF"
-            alt="Matchmaker illustration"
-            data-ai-hint="connecting hearts"
-            width={250}
-            height={150}
-            className="rounded-lg mt-6 md:mt-0 shadow-md object-cover"
-          />
-          */}
         </div>
       </Card>
 
@@ -80,7 +70,6 @@ export default function DashboardPage() {
           <QuickLink href="/profile" icon={UserCircle} title="My Matchmaker Profile" description="View and update your personal information." />
           <QuickLink href="/profile-cards" icon={BookUser} title="Manage Profile Cards" description="Create and manage profiles for your single friends. Find matches from here." />
           <QuickLink href="/potential-matches" icon={Users} title="Review Matches" description="Review and approve/reject AI-suggested matches between profile cards." />
-          <QuickLink href="/suggestions" icon={Sparkles} title="AI Matching Tips" description="Get AI-powered advice to improve your matchmaking." />
           <QuickLink href="/privacy" icon={ShieldCheck} title="Privacy Settings" description="Manage your account settings and preferences." />
         </div>
       </section>
