@@ -1,8 +1,8 @@
 
 "use client";
 
-import React from 'react'; // Added React import
-import type { UserProfile, UserRole } from '@/types';
+import React from 'react'; 
+import type { UserProfile } from '@/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,44 +14,39 @@ import { USER_ROLES } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Save, UserCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext'; // To access current user ID
+import { useAuth } from '@/contexts/AuthContext'; 
+import { generateUniqueAvatarSvgDataUri } from '@/lib/utils';
 
-// Schema for Matcher's own profile
+
 const matcherProfileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters.").max(50, "Name cannot exceed 50 characters."),
-  // Email is not editable through this form, it's tied to Firebase Auth
   bio: z.string().max(500, "Bio cannot exceed 500 characters.").optional(),
-  photoUrl: z.string().url("Must be a valid URL for your photo.").optional().or(z.literal('')),
 });
 
 type MatcherProfileFormData = z.infer<typeof matcherProfileSchema>;
 
 interface UserProfileFormProps {
-  profile: UserProfile; // Matcher's profile (should always be provided now)
+  profile: UserProfile; 
   onSubmit: (data: UserProfile) => void;
 }
 
 export function UserProfileForm({ profile, onSubmit }: UserProfileFormProps) {
   const { toast } = useToast();
-  const { firebaseUser } = useAuth(); // Get firebaseUser for ID
+  const { firebaseUser } = useAuth(); 
 
   const form = useForm<MatcherProfileFormData>({
     resolver: zodResolver(matcherProfileSchema),
     defaultValues: {
       name: profile?.name || '',
-      // email: profile?.email || '', // Not editable here
       bio: profile?.bio || '',
-      photoUrl: profile?.photoUrl || '',
     },
   });
   
-  // Reset form if profile prop changes (e.g., after initial load with default data)
   React.useEffect(() => {
     if (profile) {
       form.reset({
         name: profile.name,
         bio: profile.bio || '',
-        photoUrl: profile.photoUrl || '',
       });
     }
   }, [profile, form]);
@@ -62,13 +57,18 @@ export function UserProfileForm({ profile, onSubmit }: UserProfileFormProps) {
         toast({ variant: "destructive", title: "Error", description: "You are not logged in." });
         return;
     }
-    const updatedProfile: UserProfile = {
-      id: firebaseUser.uid, // Use Firebase UID as the profile ID
-      email: firebaseUser.email || profile.email, // Email from Firebase or existing profile
-      ...data,
-      role: USER_ROLES.RECOMMENDER, // Ensure role is always recommender
+
+    const updatedProfileData: UserProfile = {
+      id: firebaseUser.uid,
+      email: firebaseUser.email || profile.email, 
+      name: data.name,
+      bio: data.bio || '', 
+      role: USER_ROLES.RECOMMENDER, 
+      photoUrl: profile.photoUrl || generateUniqueAvatarSvgDataUri(firebaseUser.uid), // Preserve existing or generate if missing
+      // interests and preferences are not part of this form.
     };
-    onSubmit(updatedProfile); // This will update localStorage and AuthContext state via parent
+    
+    onSubmit(updatedProfileData); 
     toast({
       title: "Matchmaker Profile Saved!",
       description: "Your information has been updated.",
@@ -82,7 +82,7 @@ export function UserProfileForm({ profile, onSubmit }: UserProfileFormProps) {
           <UserCircle className="w-7 h-7" /> {profile ? 'Edit Your Matchmaker Profile' : 'Create Your Matchmaker Profile'}
         </CardTitle>
         <CardDescription className="font-body">
-          Update your matchmaker details. Your email (<span className="font-semibold">{profile?.email || firebaseUser?.email}</span>) is linked to your account and cannot be changed here.
+          Update your matchmaker details. Your email (<span className="font-semibold">{profile?.email || firebaseUser?.email}</span>) is linked to your account and cannot be changed here. Your avatar is automatically generated.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -111,20 +111,6 @@ export function UserProfileForm({ profile, onSubmit }: UserProfileFormProps) {
                   <FormControl>
                     <Textarea placeholder="Tell us a bit about your matchmaking style or why you enjoy connecting people..." {...field} className="font-body min-h-[100px] bg-card" />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="photoUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-body">Your Photo URL (Optional)</FormLabel>
-                  <FormControl>
-                    <Input type="url" placeholder="https://example.com/your-photo.jpg" {...field} className="font-body bg-card" />
-                  </FormControl>
-                  <FormDescription className="font-body text-xs">Link to your profile picture.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

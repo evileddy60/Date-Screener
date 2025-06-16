@@ -15,6 +15,7 @@ import {
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 import { mockUserProfiles } from '@/lib/mockData'; // Still needed for other user's data temporarily
+import { generateUniqueAvatarSvgDataUri } from '@/lib/utils'; // Import new avatar generator
 
 interface AuthContextType {
   currentUser: UserProfile | null;
@@ -40,13 +41,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       if (user) {
         setFirebaseUser(user);
-        // Try to load enhanced profile from localStorage
         const storedProfile = localStorage.getItem(`userProfile-${user.uid}`);
         if (storedProfile) {
           setCurrentUser(JSON.parse(storedProfile));
         } else {
-          // If no local profile, create a basic one (e.g., first login on new device)
-          // This part will be enhanced when Firestore profiles are used.
           const defaultName = user.email ? user.email.split('@')[0] : 'New Matcher';
           const basicProfile: UserProfile = {
             id: user.uid,
@@ -54,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             name: user.displayName || defaultName,
             role: USER_ROLES.RECOMMENDER,
             bio: 'Welcome! Please complete your matchmaker profile.',
-            photoUrl: user.photoURL || `https://placehold.co/400x400?text=${user.email ? user.email.charAt(0).toUpperCase() : 'M'}`,
+            photoUrl: generateUniqueAvatarSvgDataUri(user.uid), 
           };
           setCurrentUser(basicProfile);
           localStorage.setItem(`userProfile-${user.uid}`, JSON.stringify(basicProfile));
@@ -62,8 +60,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setFirebaseUser(null);
         setCurrentUser(null);
-        localStorage.removeItem('activeFirebaseUserId'); // Clear active user ID
-        // Potentially clear all userProfile-* keys if needed, or manage individually
+        // Attempt to get activeFirebaseUserId before it's cleared, if needed for specific profile removal
+        // However, a simple full clear or specific key removal is usually fine on logout.
+        const activeId = localStorage.getItem('activeFirebaseUserId');
+        if (activeId) {
+            localStorage.removeItem(`userProfile-${activeId}`);
+        }
+        localStorage.removeItem('activeFirebaseUserId'); 
       }
       setIsLoading(false);
     });
@@ -76,31 +79,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password_for_firebase);
       const fbUser = userCredential.user;
-      // onAuthStateChanged will handle setting firebaseUser and currentUser
-      // Forcing a profile check/creation here as onAuthStateChanged might be slightly delayed
-      const storedProfile = localStorage.getItem(`userProfile-${fbUser.uid}`);
-      if (storedProfile) {
-        setCurrentUser(JSON.parse(storedProfile));
-      } else {
-        const defaultName = fbUser.email ? fbUser.email.split('@')[0] : 'Matcher';
-        const basicProfile: UserProfile = {
-            id: fbUser.uid,
-            email: fbUser.email || '',
-            name: fbUser.displayName || defaultName,
-            role: USER_ROLES.RECOMMENDER,
-            photoUrl: `https://placehold.co/400x400?text=${fbUser.email ? fbUser.email.charAt(0).toUpperCase() : 'M'}`,
-        };
-        setCurrentUser(basicProfile);
-        localStorage.setItem(`userProfile-${fbUser.uid}`, JSON.stringify(basicProfile));
-      }
+      // The onAuthStateChanged listener will handle setting firebaseUser and currentUser from localStorage
+      // We just need to ensure activeFirebaseUserId is set.
       localStorage.setItem('activeFirebaseUserId', fbUser.uid);
       router.push('/dashboard');
       toast({ title: "Login Successful", description: "Welcome back!" });
     } catch (error: any) {
       console.error("Firebase login error:", error);
       toast({ variant: "destructive", title: "Login Failed", description: error.message || "Invalid credentials." });
-      setCurrentUser(null);
-      setFirebaseUser(null);
+      // No need to setCurrentUser(null) here, onAuthStateChanged handles it if auth state is truly null
     } finally {
       setIsLoading(false);
     }
@@ -118,17 +105,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         name: name_from_form || (fbUser.email ? fbUser.email.split('@')[0] : 'New Matcher'),
         role: USER_ROLES.RECOMMENDER,
         bio: 'Just joined! Ready to make some matches.',
-        photoUrl: `https://placehold.co/400x400?text=${(name_from_form || fbUser.email!).charAt(0).toUpperCase()}`,
-        // interests and preferences can be added via profile page
+        photoUrl: generateUniqueAvatarSvgDataUri(fbUser.uid),
       };
       
+      // onAuthStateChanged will set firebaseUser. Here we set currentUser and store it.
       setCurrentUser(newUserProfile);
-      setFirebaseUser(fbUser); // Ensure firebaseUser is also set
       localStorage.setItem(`userProfile-${fbUser.uid}`, JSON.stringify(newUserProfile));
       localStorage.setItem('activeFirebaseUserId', fbUser.uid);
       
-      // Update mockUserProfiles with the new user FOR THIS SESSION ONLY for display purposes of other users
-      // This is a temporary measure until Firestore is used for all profiles
+      // Update mockUserProfiles if it's still being used for any other part (e.g., displaying other users)
       const existingMockUserIndex = mockUserProfiles.findIndex(p => p.email === newUserProfile.email);
       if (existingMockUserIndex === -1) {
           mockUserProfiles.push(newUserProfile);
@@ -136,13 +121,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           mockUserProfiles[existingMockUserIndex] = newUserProfile;
       }
 
-      router.push('/profile'); // Redirect new users to complete their matcher profile
+      router.push('/profile'); 
       toast({ title: "Signup Successful!", description: "Welcome! Please complete your profile." });
     } catch (error: any) {
       console.error("Firebase signup error:", error);
       toast({ variant: "destructive", title: "Signup Failed", description: error.message || "Could not create account." });
-      setCurrentUser(null);
-      setFirebaseUser(null);
+      // No need to setCurrentUser(null) here, onAuthStateChanged handles it
     } finally {
       setIsLoading(false);
     }
@@ -151,10 +135,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logoutUser = async () => {
     setIsLoading(true);
     try {
+      // The onAuthStateChanged listener will clear firebaseUser, currentUser, 
+      // and remove userProfile from localStorage. We just call signOut.
       await signOut(auth);
-      // onAuthStateChanged will clear firebaseUser and currentUser
-      localStorage.removeItem(`userProfile-${firebaseUser?.uid}`); // Remove specific user's profile
-      localStorage.removeItem('activeFirebaseUserId');
+      // activeFirebaseUserId is cleared by onAuthStateChanged when user becomes null
       router.push('/auth/login');
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
@@ -167,8 +151,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const isAuthenticated = !!firebaseUser && !!currentUser && currentUser.role === USER_ROLES.RECOMMENDER;
 
-  // Function to update current user's profile in context and localStorage
-  // This will be called from the profile page after saving.
+  // Function to allow components to update the currentUser in context and localStorage
+  // This might be used by UserProfileForm after a successful profile update
   const updateUserProfileInContext = (updatedProfile: UserProfile) => {
     if (firebaseUser && firebaseUser.uid === updatedProfile.id) {
       setCurrentUser(updatedProfile);
@@ -176,17 +160,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-
   return (
     <AuthContext.Provider value={{ 
       currentUser, 
       firebaseUser,
       isAuthenticated, 
-      loginUser, // renamed from login
-      signupUser, // new function
-      logoutUser: logoutUser, // renamed from logout
+      loginUser, 
+      signupUser, 
+      logoutUser: logoutUser, 
       isLoading 
-      // updateUserProfileInContext might be exposed if needed by profile page directly
+      // If updateUserProfileInContext is needed by other components, expose it here:
+      // updateUserProfile: updateUserProfileInContext 
       }}>
       {children}
     </AuthContext.Provider>
