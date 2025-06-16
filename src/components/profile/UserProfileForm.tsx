@@ -1,6 +1,7 @@
 
 "use client";
 
+import React from 'react'; // Added React import
 import type { UserProfile, UserRole } from '@/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
