@@ -5,8 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import Image from 'next/image';
-import { UserCircle, BookUser, Sparkles, ShieldCheck, ArrowRight, Users, ClipboardCheck } from 'lucide-react'; // Removed SearchHeart
+// Removed: import Image from 'next/image';
+import { UserCircle, BookUser, Sparkles, ShieldCheck, ArrowRight, Users, ClipboardCheck } from 'lucide-react'; 
 import { USER_ROLES } from '@/lib/constants';
 
 export default function DashboardPage() {
@@ -61,6 +61,7 @@ export default function DashboardPage() {
               Ready to create profiles for your friends and find them great matches?
             </p>
           </div>
+          {/* Removed Image component
           <Image 
             src="https://placehold.co/250x150/FFACD/FFFFFF"
             alt="Matchmaker illustration"
@@ -69,6 +70,7 @@ export default function DashboardPage() {
             height={150}
             className="rounded-lg mt-6 md:mt-0 shadow-md object-cover"
           />
+          */}
         </div>
       </Card>
 
