@@ -63,34 +63,40 @@ export default function ProfileCardsPage() {
   
   const handleProfileCardSaved = async (savedCardData: Omit<ProfileCardType, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'>, existingCardId?: string) => {
     if (!currentUser) return;
-    setIsLoadingData(true); // Indicate loading while saving and refetching
 
     try {
       if (existingCardId) {
         // This is an update
+        const originalCard = myProfileCards.find(c => c.id === existingCardId);
+        if (!originalCard) {
+            console.error("Original card not found for update");
+            return;
+        }
         const cardToUpdate: ProfileCardType = {
           ...savedCardData,
           id: existingCardId,
-          createdByMatcherId: currentUser.id, // Ensure this is set
-          matcherName: currentUser.name, // Ensure this is set
-           // Retain original createdAt, or fetch original card to get it if not passed
-          createdAt: myProfileCards.find(c => c.id === existingCardId)?.createdAt || new Date().toISOString(),
+          createdByMatcherId: currentUser.id, 
+          matcherName: currentUser.name, 
+          createdAt: originalCard.createdAt, // Retain original createdAt
         };
         await updateProfileCard(cardToUpdate);
+        setMyProfileCards(prevCards => 
+            prevCards
+                .map(card => (card.id === existingCardId ? cardToUpdate : card))
+                .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        );
       } else {
         // This is a new card
-        await addProfileCard(savedCardData, currentUser.id, currentUser.name);
+        const newCard = await addProfileCard(savedCardData, currentUser.id, currentUser.name);
+        setMyProfileCards(prevCards => 
+            [newCard, ...prevCards]
+                .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        );
       }
-      
-      // Re-fetch cards to update the list
-      const cards = await getProfileCardsByMatcher(currentUser.id);
-      setMyProfileCards(cards.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-
     } catch (error) {
       console.error("Error saving profile card:", error);
       // Handle error (e.g., show toast)
     } finally {
-      setIsLoadingData(false);
       handleCloseModal();
     }
   };
@@ -163,7 +169,7 @@ export default function ProfileCardsPage() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         profileCard={editingProfileCard}
-        onSave={(data) => handleProfileCardSaved(data, editingProfileCard?.id)}
+        onSave={(data, id) => handleProfileCardSaved(data, id)} // Pass existingCardId here
       />
     </div>
   );

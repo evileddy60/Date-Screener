@@ -20,7 +20,7 @@ interface CreateEditProfileCardModalProps {
   isOpen: boolean;
   onClose: () => void;
   profileCard?: ProfileCard | null; // Existing card for editing, null/undefined for creating
-  onSave: (data: Omit<ProfileCard, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'>) => void; // Modified to pass only form data
+  onSave: (data: Omit<ProfileCard, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'>, existingCardId?: string) => void; // Modified to pass existingCardId
 }
 
 const profileCardSchema = z.object({
@@ -112,14 +112,16 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
     };
 
     try {
-        await onSave(dataToSave);
+        // Pass profileCard?.id to distinguish between create and edit
+        await onSave(dataToSave, profileCard?.id); 
         toast({ title: `Profile Card ${profileCard ? 'Updated' : 'Created'}!`, description: `${data.friendName}'s profile is ready.` });
     } catch (error) {
         console.error("Error in onSave callback:", error);
         toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the profile card.'});
     } finally {
         setIsSubmitting(false);
-        // Parent component's onSave handler is now responsible for closing the modal
+        // Parent component's onSave handler is now responsible for closing the modal if successful
+        // The modal might stay open on error, or the parent can decide.
     }
   };
   
