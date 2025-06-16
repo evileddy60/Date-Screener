@@ -1,6 +1,20 @@
 
 export type UserRole = 'single' | 'recommender'; // 'single' role will be phased out from active use
 
+export interface PrivacySettingsData {
+  profileVisibility: string;
+  // allowRecommendationsFrom: string; // This seems less relevant for a matcher's own profile settings
+  // optOutOfAllRecommendations: boolean; // This also seems less relevant for a matcher
+  emailNotificationsForNewMatches: boolean; // Renamed for clarity (matchmaker context)
+  emailNotificationsForMatchUpdates: boolean; // Renamed for clarity
+}
+
+export const defaultPrivacySettings: PrivacySettingsData = {
+  profileVisibility: 'recommenders_only', // Default for matchmakers
+  emailNotificationsForNewMatches: true,
+  emailNotificationsForMatchUpdates: true,
+};
+
 export interface UserProfile { // This is now the Matcher's profile
   id: string;
   email: string;
@@ -10,6 +24,7 @@ export interface UserProfile { // This is now the Matcher's profile
   interests?: string[]; // Matcher's interests (less relevant now)
   photoUrl?: string;
   preferences?: Record<string, any>; // Matcher's preferences (less relevant now)
+  privacySettings?: PrivacySettingsData;
 }
 
 export interface ProfileCard { // Profile of a single friend, created by a Matcher

@@ -1,8 +1,9 @@
 
 "use client";
 
-import type { UserProfile, UserRole } from '@/types';
+import type { UserProfile, UserRole, PrivacySettingsData } from '@/types';
 import { USER_ROLES } from '@/lib/constants';
+import { defaultPrivacySettings } from '@/types'; // Import default settings
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase'; // Firebase auth instance
@@ -14,7 +15,7 @@ import {
   signOut 
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
-import { mockUserProfiles } from '@/lib/mockData'; // Still needed for other user's data temporarily
+import { mockUserProfiles } from '@/lib/mockData'; 
 import { generateUniqueAvatarSvgDataUri } from '@/lib/utils'; 
 
 interface AuthContextType {
@@ -25,7 +26,7 @@ interface AuthContextType {
   signupUser: (email: string, password_unused?: string, name?: string) => Promise<void>; 
   logoutUser: () => Promise<void>;
   isLoading: boolean;
-  updateUserProfile: (updatedProfile: UserProfile) => void; // Added this line
+  updateUserProfile: (updatedProfile: UserProfile) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,9 +43,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       if (user) {
         setFirebaseUser(user);
-        const storedProfile = localStorage.getItem(`userProfile-${user.uid}`);
-        if (storedProfile) {
-          setCurrentUser(JSON.parse(storedProfile));
+        const storedProfileString = localStorage.getItem(`userProfile-${user.uid}`);
+        if (storedProfileString) {
+          const storedProfile = JSON.parse(storedProfileString);
+          // Ensure privacySettings exist, apply defaults if not
+          if (!storedProfile.privacySettings) {
+            storedProfile.privacySettings = defaultPrivacySettings;
+            localStorage.setItem(`userProfile-${user.uid}`, JSON.stringify(storedProfile)); // Save updated profile
+          }
+          setCurrentUser(storedProfile);
         } else {
           const defaultName = user.email ? user.email.split('@')[0] : 'New Matcher';
           const basicProfile: UserProfile = {
@@ -54,6 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             role: USER_ROLES.RECOMMENDER,
             bio: 'Welcome! Please complete your matchmaker profile.',
             photoUrl: generateUniqueAvatarSvgDataUri(user.uid), 
+            privacySettings: defaultPrivacySettings, // Add default privacy settings
           };
           setCurrentUser(basicProfile);
           localStorage.setItem(`userProfile-${user.uid}`, JSON.stringify(basicProfile));
@@ -103,10 +111,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         role: USER_ROLES.RECOMMENDER,
         bio: 'Just joined! Ready to make some matches.',
         photoUrl: generateUniqueAvatarSvgDataUri(fbUser.uid),
+        privacySettings: defaultPrivacySettings, // Add default privacy settings
       };
       
-      setCurrentUser(newUserProfile); // Set in context
-      localStorage.setItem(`userProfile-${fbUser.uid}`, JSON.stringify(newUserProfile)); // Set in localStorage
+      setCurrentUser(newUserProfile); 
+      localStorage.setItem(`userProfile-${fbUser.uid}`, JSON.stringify(newUserProfile)); 
       localStorage.setItem('activeFirebaseUserId', fbUser.uid);
       
       const existingMockUserIndex = mockUserProfiles.findIndex(p => p.email === newUserProfile.email);
@@ -130,7 +139,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signOut(auth);
-      // onAuthStateChanged handles clearing currentUser, firebaseUser, and localStorage
       router.push('/auth/login');
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
@@ -145,8 +153,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateUserProfile = (updatedProfile: UserProfile) => {
     if (firebaseUser && firebaseUser.uid === updatedProfile.id) {
-      setCurrentUser(updatedProfile); // Update context state
-      localStorage.setItem(`userProfile-${firebaseUser.uid}`, JSON.stringify(updatedProfile)); // Update localStorage
+      // Ensure privacySettings are part of the update
+      const profileToSave = {
+        ...updatedProfile,
+        privacySettings: updatedProfile.privacySettings || defaultPrivacySettings,
+      };
+      setCurrentUser(profileToSave); 
+      localStorage.setItem(`userProfile-${firebaseUser.uid}`, JSON.stringify(profileToSave)); 
     }
   };
 
@@ -159,7 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signupUser, 
       logoutUser, 
       isLoading,
-      updateUserProfile // Expose the new function
+      updateUserProfile
       }}>
       {children}
     </AuthContext.Provider>

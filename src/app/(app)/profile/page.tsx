@@ -5,19 +5,25 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserProfileForm } from '@/components/profile/UserProfileForm';
 import { ProfileDisplay } from '@/components/profile/ProfileDisplay';
-import type { UserProfile as UserProfileType } from '@/types';
+import type { UserProfile as UserProfileType } from '@/types'; // Ensure PrivacySettingsData is implicitly part of UserProfileType via import
 import { Button } from '@/components/ui/button';
 import { Loader2, Edit3, Eye } from 'lucide-react';
 import { USER_ROLES } from '@/lib/constants';
+import { defaultPrivacySettings } from '@/types'; // Import default settings
 
 export default function ProfilePage() {
-  const { currentUser, isLoading: authLoading, firebaseUser, updateUserProfile } = useAuth(); // Added updateUserProfile
+  const { currentUser, isLoading: authLoading, firebaseUser, updateUserProfile } = useAuth();
   const [profileData, setProfileData] = useState<UserProfileType | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (currentUser && currentUser.role === USER_ROLES.RECOMMENDER) {
-      setProfileData(currentUser);
+      // Ensure currentUser always has privacySettings, even if just defaults
+      const fullProfile = {
+        ...currentUser,
+        privacySettings: currentUser.privacySettings || defaultPrivacySettings,
+      };
+      setProfileData(fullProfile);
       if (currentUser.bio === 'Just joined! Ready to make some matches.' || currentUser.bio === 'Enthusiastic new matchmaker!' || !currentUser.name.includes(' ') || currentUser.bio === 'Welcome! Please complete your matchmaker profile.') {
         setIsEditing(true);
       }
@@ -25,13 +31,9 @@ export default function ProfilePage() {
   }, [currentUser]);
 
   const handleProfileUpdate = (updatedProfile: UserProfileType) => {
-    updatedProfile.role = USER_ROLES.RECOMMENDER; // Ensure role remains recommender
-    
     if (firebaseUser && firebaseUser.uid === updatedProfile.id) {
-      updateUserProfile(updatedProfile); // Use context function to update
-      // setProfileData(updatedProfile); // This will be updated by the useEffect when currentUser changes
+      updateUserProfile(updatedProfile); // AuthContext function handles saving and updating context
     }
-    
     setIsEditing(false);
   };
 
@@ -44,17 +46,20 @@ export default function ProfilePage() {
     );
   }
   
-  if (!profileData) {
-      if (firebaseUser) {
-           if (!isEditing && currentUser?.bio === 'Welcome! Please complete your matchmaker profile.') {
-             setIsEditing(true); 
-           } else if (!isEditing && (!currentUser || currentUser.bio === 'Just joined! Ready to make some matches.' || currentUser.bio === 'Enthusiastic new matchmaker!')) {
-             setIsEditing(true);
-           }
-      } else {
-         return <p className="text-center font-body">Profile data not available. Please ensure you are logged in.</p>;
-      }
+  if (!profileData && firebaseUser) {
+    // This block might be redundant given the loading state above, but as a fallback
+    // for scenarios where currentUser might be briefly null after firebaseUser is set.
+    // The useEffect should populate profileData correctly.
+    if (!isEditing && (currentUser?.bio === 'Welcome! Please complete your matchmaker profile.' || 
+                      !currentUser?.name.includes(' ') || 
+                      currentUser?.bio === 'Just joined! Ready to make some matches.' || 
+                      currentUser?.bio === 'Enthusiastic new matchmaker!')) {
+      setIsEditing(true); 
+    }
+  } else if (!profileData && !firebaseUser) {
+    return <p className="text-center font-body">Profile data not available. Please ensure you are logged in.</p>;
   }
+
 
   if (currentUser?.role !== USER_ROLES.RECOMMENDER) {
       return <p className="text-center font-body">This profile page is for Matchmakers.</p>;
@@ -64,21 +69,30 @@ export default function ProfilePage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="font-headline text-4xl font-semibold text-primary">Your Matchmaker Profile</h1>
+        <h1 className="font-headline text-4xl font-semibold text-primary">Your Matchmaker Settings</h1>
         {profileData && 
           <Button onClick={() => setIsEditing(!isEditing)} variant="outline" className="border-primary text-primary hover:bg-primary/10">
-            {isEditing ? <><Eye className="mr-2 h-4 w-4" /> View Profile</> : <><Edit3 className="mr-2 h-4 w-4" /> Edit Profile</>}
+            {isEditing ? <><Eye className="mr-2 h-4 w-4" /> View Profile & Settings</> : <><Edit3 className="mr-2 h-4 w-4" /> Edit Profile & Settings</>}
           </Button>
         }
       </div>
 
+      {/* Ensure profileData is passed and is not null */}
       {isEditing && profileData ? ( 
         <UserProfileForm profile={profileData} onSubmit={handleProfileUpdate} />
       ) : profileData ? ( 
         <ProfileDisplay profile={profileData} />
       ) : (
-        // Initial state before profileData is set or if form should be shown for new user
-        <UserProfileForm profile={currentUser || {} as UserProfileType} onSubmit={handleProfileUpdate} />
+        // Fallback for initial state or if profileData is somehow null but firebaseUser exists
+        // This tries to use currentUser or an empty shell if currentUser is also null.
+        // It's important that profileData becomes non-null quickly via useEffect.
+        <UserProfileForm 
+          profile={currentUser || { 
+              id: '', email: '', name: '', role: USER_ROLES.RECOMMENDER, 
+              privacySettings: defaultPrivacySettings 
+            } as UserProfileType} 
+          onSubmit={handleProfileUpdate} 
+        />
       )}
     </div>
   );

@@ -1,17 +1,9 @@
-"use client";
 
-import { PrivacySettingsForm } from '@/components/privacy/PrivacySettingsForm';
+// This file is no longer used and can be deleted.
+// Privacy settings have been integrated into the profile page (src/app/(app)/profile/page.tsx).
+// Keeping it empty to signify it's marked for deletion or to avoid breaking if something still tries to route here.
+// In a real scenario, you would delete this file.
 
-export default function PrivacyPage() {
-  return (
-    <div className="max-w-3xl mx-auto space-y-8">
-      <div className="text-center">
-        <h1 className="font-headline text-4xl font-semibold text-primary">Privacy Settings</h1>
-        <p className="font-body text-lg text-foreground/80 mt-2">
-          Your privacy is important to us. Configure your settings below.
-        </p>
-      </div>
-      <PrivacySettingsForm />
-    </div>
-  );
+export default function DeprecatedPrivacyPage() {
+  return null;
 }
