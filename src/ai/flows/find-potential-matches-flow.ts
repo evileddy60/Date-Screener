@@ -29,7 +29,7 @@ const ProfileCardPromptSchema = z.object({
 type ProfileCardPrompt = z.infer<typeof ProfileCardPromptSchema>;
 
 
-export const FindPotentialMatchesInputSchema = z.object({
+const FindPotentialMatchesInputSchema = z.object({
   targetProfileCardId: z.string().describe("The ID of the Profile Card for which to find matches."),
   requestingMatcherId: z.string().describe("The ID of the matcher requesting these matches."),
 });
@@ -45,7 +45,7 @@ const AIOutputSchema = z.object({
   suggestions: z.array(AISuggestedMatchSchema).describe("An array of suggested matches. Should be the top 3-5 matches, or empty if no good matches found."),
 });
 
-export const FindPotentialMatchesOutputSchema = z.object({
+const FindPotentialMatchesOutputSchema = z.object({
   createdPotentialMatchIds: z.array(z.string()).describe("An array of IDs of the PotentialMatch objects created and stored."),
 });
 export type FindPotentialMatchesOutput = z.infer<typeof FindPotentialMatchesOutputSchema>;
