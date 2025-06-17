@@ -12,14 +12,13 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
+let db: Firestore | undefined;
 let firebaseInitializationError: string | null = null;
 
 const isServer = typeof window === 'undefined';
 
-// Explicitly log the API key being used on the server-side for verification
 if (isServer) {
   console.log("SERVER_SIDE_FIREBASE_INIT: Using NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
   if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "your_firebase_api_key") {
@@ -28,14 +27,12 @@ if (isServer) {
   }
   if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
     console.error("SERVER_SIDE_FIREBASE_INIT_ERROR: NEXT_PUBLIC_FIREBASE_PROJECT_ID is missing or was not correctly passed to the server environment!");
-    if (!firebaseInitializationError) { // Don't overwrite a more specific API key error
+    if (!firebaseInitializationError) {
         firebaseInitializationError = "SERVER_SIDE_FIREBASE_INIT_ERROR: NEXT_PUBLIC_FIREBASE_PROJECT_ID is missing or invalid.";
     }
   }
 }
 
-
-// Initial check for critical environment variables (client-side context check still useful for completeness)
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key" || !firebaseConfig.projectId) {
   let missingVars = [];
   if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key") missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY");
@@ -43,54 +40,45 @@ if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key" 
   
   const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required environment variables are missing or are placeholders: ${missingVars.join(', ')}. Firebase cannot initialize. Please set them correctly in your project environment.`;
   
-  if (!firebaseInitializationError) { // Prioritize server-side detected errors
+  if (!firebaseInitializationError) {
     firebaseInitializationError = errorMessage;
   }
-  // This console.error will also appear in client browser if env vars are not bundled correctly by Next.js
   console.error("FIREBASE_CONFIG_ERROR (will show in server or client logs):", errorMessage);
 }
 
 
 if (!firebaseInitializationError) {
-  if (!getApps().length) {
-    try {
+  try {
+    if (!getApps().length) {
       app = initializeApp(firebaseConfig);
-    } catch (initError: any) {
-      const errorMessage = `CRITICAL: Firebase initializeApp FAILED: ${initError.message || initError}. Config used: ${JSON.stringify(firebaseConfig)}`;
-      console.error("FIREBASE_INIT_ERROR (initializeApp):", errorMessage);
-      firebaseInitializationError = errorMessage;
+    } else {
+      app = getApp();
     }
-  } else {
-    app = getApp();
-  }
-
-  // @ts-ignore app should be defined if no error previously
-  if (app && !firebaseInitializationError) { 
-    try {
-      auth = getAuth(app);
-    } catch (authError: any) {
-      const errorMessage = `CRITICAL: Firebase getAuth FAILED: ${authError.message || authError}`;
-      console.error("FIREBASE_INIT_ERROR (getAuth):", errorMessage);
-      firebaseInitializationError = errorMessage;
-      // @ts-ignore
-      auth = undefined; 
-    }
-
-    try {
-      db = getFirestore(app);
-    } catch (firestoreError: any) {
-      const errorMessage = `CRITICAL: Firebase getFirestore FAILED: ${firestoreError.message || firestoreError}`;
-      console.error("FIREBASE_INIT_ERROR (getFirestore):", errorMessage);
-      firebaseInitializationError = errorMessage;
-      // @ts-ignore
-      db = undefined; 
-    }
+    // If app initialization succeeded, try to get auth and db
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (error: any) {
+    const errorMessage = `CRITICAL: Firebase initialization of core services FAILED: ${error.message || error}. Config used: ${JSON.stringify(firebaseConfig)}`;
+    console.error("FIREBASE_INIT_ERROR (core services):", errorMessage);
+    firebaseInitializationError = errorMessage;
+    app = undefined; 
+    auth = undefined;
+    db = undefined;
   }
 }
 
-if (firebaseInitializationError && !isServer && typeof window !== 'undefined') {
-  console.error("Firebase Initialization Error (Client-side notification):", firebaseInitializationError);
+// Explicitly log and ensure auth/db are undefined if there was any initialization error
+if (firebaseInitializationError) {
+  console.error("Firebase Initialization Error means Auth and DB services may be unavailable:", firebaseInitializationError);
+  auth = undefined; 
+  db = undefined;
+}
+
+
+if (!isServer && typeof window !== 'undefined' && firebaseInitializationError) {
+  // This helps to see the error on the client side during development if it happened during server init
+  // and wasn't caught by a UI notification elsewhere.
+  console.error("Firebase Initialization Error (Client-side notification of potential server init issue):", firebaseInitializationError);
 }
 
 export { app, auth, db, firebaseInitializationError };
-

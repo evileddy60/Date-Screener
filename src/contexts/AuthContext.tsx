@@ -6,7 +6,7 @@ import { USER_ROLES } from '@/lib/constants';
 import { defaultPrivacySettings } from '@/types'; 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth, firebaseInitializationError, db } from '@/lib/firebase';
+import { auth, firebaseInitializationError, db } from '@/lib/firebase'; // db is imported
 import { 
   User as FirebaseUser, 
   onAuthStateChanged, 
@@ -52,13 +52,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       return;
     }
-    if (!auth) {
-      console.error("AuthContext: Firebase auth instance is not available. Firebase might not have initialized correctly.");
+    if (!auth) { // Check if auth object is available
+      console.error("AuthContext: Firebase auth instance is not available. Firebase might not have initialized correctly or is blocked.");
       if (typeof window !== 'undefined') {
         toast({ 
             variant: "destructive", 
             title: "Firebase Auth Error", 
-            description: "Authentication service is unavailable. Please check console.",
+            description: "Authentication service is unavailable. This might be due to a configuration issue or network block. Please check console.",
             duration: 10000
         });
       }
@@ -86,7 +86,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
             setCurrentUser(profile);
           } else {
-            // User signed in with Google for the first time, create their profile
             const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'New Matcher');
             const newProfile: UserProfile = {
               id: user.uid,
@@ -99,8 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             };
             await setUserProfile(newProfile); 
             setCurrentUser(newProfile);
-            
-            if (router.pathname !== '/profile') {
+            if (typeof window !== 'undefined' && window.location.pathname !== '/profile') {
                 router.push('/profile');
             }
           }
@@ -125,11 +123,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [router, toast]);
+  }, [router, toast]); // auth is not directly in deps as its availability is checked inside
 
   const handleGoogleSignIn = async (isSignUp: boolean = false) => {
     if (firebaseInitializationError || !auth) {
-      toast({ variant: "destructive", title: "Sign-in Error", description: "Firebase not initialized. Cannot sign in." });
+      toast({ variant: "destructive", title: "Sign-in Error", description: "Firebase not initialized or auth service unavailable. Cannot sign in." });
       setIsLoading(false);
       return;
     }
@@ -137,17 +135,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle fetching/creating Firestore profile
-      // For new users, they are redirected to /profile by onAuthStateChanged logic
-      // For existing users, redirect to dashboard.
-      const userProfile = await getUserProfile(result.user.uid);
+      const userProfile = await getUserProfile(result.user.uid); // This ensures profile is fetched/created
+      
+      // onAuthStateChanged will set currentUser. Here we ensure redirection logic.
       if (userProfile && userProfile.bio !== 'Welcome! Please complete your matchmaker profile.') {
-        router.push('/dashboard');
+         if (typeof window !== 'undefined' && (window.location.pathname === '/auth/login' || window.location.pathname === '/auth/signup')) {
+            router.push('/dashboard');
+        }
+      } else {
+        // New user or profile needs completion, onAuthStateChanged should redirect to /profile
+         if (typeof window !== 'undefined' && window.location.pathname !== '/profile') {
+             router.push('/profile');
+         }
       }
-      // If it's a new user, onAuthStateChanged's logic will redirect to /profile
-      toast({ title: isSignUp ? "Sign-Up Successful" : "Sign-In Successful", description: "Welcome!" });
+      toast({ title: isSignUp ? "Sign-Up Successful!" : "Sign-In Successful!", description: "Welcome to Date Screener!" });
     } catch (error: any) {
-      console.error("Google sign-in error:", error);
+      console.error("Firebase Google sign-in error:", error);
       let description = "Could not sign in with Google. Please try again.";
       if (error.code === 'auth/popup-closed-by-user') {
         description = "Sign-in cancelled. Please try again if you wish to proceed.";
@@ -155,6 +158,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description = "An account already exists with the same email address but different sign-in credentials. Try signing in using the original method."
       } else if (error.code === 'auth/popup-blocked') {
         description = "Sign-in popup was blocked by the browser. Please allow popups for this site and try again.";
+      } else if (error.message && error.message.includes('auth/network-request-failed')) {
+        description = "Network error during sign-in. Please check your internet connection and try again.";
       }
       toast({ variant: "destructive", title: isSignUp ? "Sign-Up Failed" : "Sign-In Failed", description });
     } finally {
@@ -169,10 +174,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signupWithGoogle = async () => {
     await handleGoogleSignIn(true);
   };
-
+  
   const logoutUser = async () => {
     if (firebaseInitializationError || !auth) {
-      toast({ variant: "destructive", title: "Logout Error", description: "Firebase not initialized. Cannot log out." });
+      toast({ variant: "destructive", title: "Logout Error", description: "Firebase not initialized or auth service unavailable. Cannot log out." });
       setFirebaseUser(null);
       setCurrentUser(null);
       if (typeof window !== 'undefined') {
@@ -198,7 +203,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!firebaseUser && !!currentUser && currentUser.role === USER_ROLES.RECOMMENDER && !firebaseInitializationError;
 
   const updateUserProfile = async (updatedProfile: UserProfile) => {
-    if (firebaseInitializationError || !db) {
+    if (firebaseInitializationError || !db) { // Check for db too
       toast({ variant: "destructive", title: "Update Error", description: "Firebase not initialized or DB unavailable. Cannot update profile." });
       return;
     }
