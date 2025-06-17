@@ -19,69 +19,69 @@ let firebaseInitializationError: string | null = null;
 
 const isServer = typeof window === 'undefined';
 
-// Initial check for critical environment variables
+// Explicitly log the API key being used on the server-side for verification
+if (isServer) {
+  console.log("SERVER_SIDE_FIREBASE_INIT: Using NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+  if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "your_firebase_api_key") {
+    console.error("SERVER_SIDE_FIREBASE_INIT_ERROR: NEXT_PUBLIC_FIREBASE_API_KEY is missing, is a placeholder, or was not correctly passed to the server environment!");
+    firebaseInitializationError = "SERVER_SIDE_FIREBASE_INIT_ERROR: NEXT_PUBLIC_FIREBASE_API_KEY is missing or invalid.";
+  }
+  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+    console.error("SERVER_SIDE_FIREBASE_INIT_ERROR: NEXT_PUBLIC_FIREBASE_PROJECT_ID is missing or was not correctly passed to the server environment!");
+    if (!firebaseInitializationError) { // Don't overwrite a more specific API key error
+        firebaseInitializationError = "SERVER_SIDE_FIREBASE_INIT_ERROR: NEXT_PUBLIC_FIREBASE_PROJECT_ID is missing or invalid.";
+    }
+  }
+}
+
+
+// Initial check for critical environment variables (client-side context check still useful for completeness)
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key" || !firebaseConfig.projectId) {
   let missingVars = [];
   if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key") missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY");
   if (!firebaseConfig.projectId) missingVars.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
   
   const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required environment variables are missing or are placeholders: ${missingVars.join(', ')}. Firebase cannot initialize. Please set them correctly in your project environment.`;
-  console.error(errorMessage);
-  firebaseInitializationError = errorMessage;
   
-  // For server-side, always throw if critical vars are missing
-  if (isServer) {
-    // throw new Error(errorMessage); 
-    // Commented out to prevent server crash during build if vars are temporarily unset, but good for stricter local dev
+  if (!firebaseInitializationError) { // Prioritize server-side detected errors
+    firebaseInitializationError = errorMessage;
   }
+  // This console.error will also appear in client browser if env vars are not bundled correctly by Next.js
+  console.error("FIREBASE_CONFIG_ERROR (will show in server or client logs):", errorMessage);
 }
 
 
 if (!firebaseInitializationError) {
   if (!getApps().length) {
     try {
-      // console.log("Attempting to initialize Firebase app with config:", firebaseConfig);
       app = initializeApp(firebaseConfig);
-      // console.log("Firebase app initialized successfully.");
     } catch (initError: any) {
       const errorMessage = `CRITICAL: Firebase initializeApp FAILED: ${initError.message || initError}. Config used: ${JSON.stringify(firebaseConfig)}`;
-      console.error("FIREBASE_INIT_ERROR:", errorMessage);
+      console.error("FIREBASE_INIT_ERROR (initializeApp):", errorMessage);
       firebaseInitializationError = errorMessage;
-       if (isServer) {
-        // throw initError;
-      }
     }
   } else {
     app = getApp();
-    // console.log("Firebase app already initialized, getting existing app.");
   }
 
   // @ts-ignore app should be defined if no error previously
   if (app && !firebaseInitializationError) { 
     try {
       auth = getAuth(app);
-      // console.log("Firebase Auth initialized successfully.");
     } catch (authError: any) {
       const errorMessage = `CRITICAL: Firebase getAuth FAILED: ${authError.message || authError}`;
-      console.error("FIREBASE_INIT_ERROR:", errorMessage);
+      console.error("FIREBASE_INIT_ERROR (getAuth):", errorMessage);
       firebaseInitializationError = errorMessage;
-      if (isServer) {
-        // throw authError;  
-      }
       // @ts-ignore
       auth = undefined; 
     }
 
     try {
       db = getFirestore(app);
-      // console.log("Firebase Firestore initialized successfully.");
     } catch (firestoreError: any) {
       const errorMessage = `CRITICAL: Firebase getFirestore FAILED: ${firestoreError.message || firestoreError}`;
-      console.error("FIREBASE_INIT_ERROR:", errorMessage);
+      console.error("FIREBASE_INIT_ERROR (getFirestore):", errorMessage);
       firebaseInitializationError = errorMessage;
-      if (isServer) {
-        // throw firestoreError; 
-      }
       // @ts-ignore
       db = undefined; 
     }
@@ -89,10 +89,7 @@ if (!firebaseInitializationError) {
 }
 
 if (firebaseInitializationError && !isServer && typeof window !== 'undefined') {
-  // Optionally, show a toast to the user on the client-side if init failed critically
-  // This is handled in AuthContext now, so no need for direct toast here.
-  console.error("Firebase Initialization Error (Client-side):", firebaseInitializationError);
+  console.error("Firebase Initialization Error (Client-side notification):", firebaseInitializationError);
 }
-
 
 export { app, auth, db, firebaseInitializationError };
