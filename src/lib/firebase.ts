@@ -20,8 +20,8 @@ const firebaseConfig = {
 console.log("Firebase configuration object being used:", firebaseConfig);
 
 // Check if critical Firebase configuration values are defined.
-if (!firebaseConfig.apiKey) {
-  const errorMessage = "Firebase API Key is not defined. Please ensure NEXT_PUBLIC_FIREBASE_API_KEY is correctly set in your Firebase Studio project's environment variable settings.";
+if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key") {
+  const errorMessage = "Firebase API Key is not defined or is still a placeholder. Please ensure NEXT_PUBLIC_FIREBASE_API_KEY is correctly set with your actual API key in your Firebase Studio project's environment variable settings.";
   console.error(errorMessage);
   throw new Error(errorMessage);
 }
