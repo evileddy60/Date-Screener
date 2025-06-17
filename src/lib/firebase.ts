@@ -3,12 +3,6 @@ import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-// Log raw environment variables
-// console.log("RAW ENV: NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
-// console.log("RAW ENV: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:", process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN);
-// console.log("RAW ENV: NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
-
-
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -17,9 +11,6 @@ const firebaseConfig = {
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
-
-// console.log("Constructed firebaseConfig object:", firebaseConfig);
-
 
 let app: FirebaseApp;
 let auth: Auth;
@@ -33,52 +24,34 @@ if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key")
   console.error("FIREBASE_INIT_ERROR:", errorMessage);
   firebaseInitializationError = errorMessage;
   if (!isServer && process.env.NODE_ENV === 'development') { 
-    // Only throw client-side in development to avoid crashing production server
-    // throw new Error(errorMessage); 
+    // Intentionally not throwing error client-side in dev for this specific template to avoid dev loop confusion with template key
+  } else if (!isServer) {
+     // For production client-side, or if you want to be stricter in dev client-side
+     // throw new Error(errorMessage); 
   }
 }
 
-if (!firebaseConfig.projectId && !firebaseInitializationError) {
-  const errorMessage = "CRITICAL ERROR: Firebase Project ID is UNDEFINED in firebaseConfig. Check environment variables (NEXT_PUBLIC_FIREBASE_PROJECT_ID). Value: " + firebaseConfig.projectId;
-  console.error("FIREBASE_INIT_ERROR:", errorMessage);
-  firebaseInitializationError = errorMessage;
-  if (!isServer && process.env.NODE_ENV === 'development') {
-    // throw new Error(errorMessage); 
-  }
-}
-
-if (!firebaseConfig.authDomain && !firebaseInitializationError) {
-  const errorMessage = "CRITICAL ERROR: Firebase Auth Domain is UNDEFINED in firebaseConfig. Check environment variables (NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN). Value: " + firebaseConfig.authDomain;
-  console.error("FIREBASE_INIT_ERROR:", errorMessage);
-  firebaseInitializationError = errorMessage;
-  if (!isServer && process.env.NODE_ENV === 'development') {
-    // throw new Error(errorMessage); 
-  }
-}
 
 if (!firebaseInitializationError) {
   if (!getApps().length) {
     try {
       app = initializeApp(firebaseConfig);
-      // console.log("Firebase app initialized successfully. App options:", app.options);
     } catch (initError: any) {
       const errorMessage = `CRITICAL: Firebase initializeApp FAILED: ${initError.message || initError}`;
       console.error("FIREBASE_INIT_ERROR:", errorMessage);
       firebaseInitializationError = errorMessage;
       if (!isServer && process.env.NODE_ENV === 'development') {
-        // throw initError;  
+        // throw initError;
       }
     }
   } else {
     app = getApp();
-    // console.log("Firebase app already initialized. Using existing app. App options:", app.options);
   }
 
   // @ts-ignore app will be defined if no error previously
   if (app && !firebaseInitializationError) { 
     try {
       auth = getAuth(app);
-      // console.log("Firebase Auth initialized successfully.");
     } catch (authError: any) {
       const errorMessage = `CRITICAL: Firebase getAuth FAILED: ${authError.message || authError}`;
       console.error("FIREBASE_INIT_ERROR:", errorMessage);
@@ -92,7 +65,6 @@ if (!firebaseInitializationError) {
 
     try {
       db = getFirestore(app);
-      // console.log("Firebase Firestore initialized successfully.");
     } catch (firestoreError: any) {
       const errorMessage = `CRITICAL: Firebase getFirestore FAILED: ${firestoreError.message || firestoreError}`;
       console.error("FIREBASE_INIT_ERROR:", errorMessage);
