@@ -3,27 +3,27 @@
 
 import type { UserProfile, UserRole, PrivacySettingsData } from '@/types';
 import { USER_ROLES } from '@/lib/constants';
-import { defaultPrivacySettings } from '@/types'; 
+import { defaultPrivacySettings } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth, firebaseInitializationError, db } from '@/lib/firebase'; // db is imported
-import { 
-  User as FirebaseUser, 
-  onAuthStateChanged, 
+import {
+  User as FirebaseUser,
+  onAuthStateChanged,
   signOut,
-  GoogleAuthProvider, 
+  GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
-import { generateUniqueAvatarSvgDataUri } from '@/lib/utils'; 
+import { generateUniqueAvatarSvgDataUri } from '@/lib/utils';
 import { getUserProfile, setUserProfile } from '@/lib/firestoreService';
 
 interface AuthContextType {
   currentUser: UserProfile | null;
-  firebaseUser: FirebaseUser | null; 
+  firebaseUser: FirebaseUser | null;
   isAuthenticated: boolean;
-  loginWithGoogle: () => Promise<void>; 
-  signupWithGoogle: () => Promise<void>; 
+  loginWithGoogle: () => Promise<void>;
+  signupWithGoogle: () => Promise<void>;
   logoutUser: () => Promise<void>;
   isLoading: boolean;
   updateUserProfile: (updatedProfile: UserProfile) => Promise<void>;
@@ -44,22 +44,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (firebaseInitializationError) {
       console.error("AuthContext: Firebase did not initialize correctly, AuthProvider will not proceed.", firebaseInitializationError);
       if (typeof window !== 'undefined') {
-        toast({ 
-          variant: "destructive", 
-          title: "Firebase Critical Error", 
+        toast({
+          variant: "destructive",
+          title: "Firebase Critical Error",
           description: "Firebase services could not be initialized. Some features may not work. Please check console & environment variables.",
-          duration: 10000 
+          duration: 10000
         });
       }
       setIsLoading(false);
       return;
     }
-    if (!auth) { 
+    if (!auth) {
       console.error("AuthContext: Firebase auth instance is not available. Firebase might not have initialized correctly or is blocked.");
       if (typeof window !== 'undefined') {
-        toast({ 
-            variant: "destructive", 
-            title: "Firebase Auth Error", 
+        toast({
+            variant: "destructive",
+            title: "Firebase Auth Error",
             description: "Authentication service is unavailable. This might be due to a configuration issue or network block. Please check console.",
             duration: 10000
         });
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       if (user) {
         setFirebaseUser(user);
-        if (!db) { 
+        if (!db) {
           console.error("AuthContext: Firestore DB instance is not available. Cannot fetch/set user profile.");
           toast({ variant: "destructive", title: "Profile Error", description: "Database service unavailable. Cannot load profile." });
           setCurrentUser(null);
@@ -80,37 +80,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
         try {
-          let profile = await getUserProfile(user.uid); 
-          
+          let profile = await getUserProfile(user.uid);
+
           if (profile) {
             if (!profile.privacySettings) {
               profile.privacySettings = defaultPrivacySettings;
             }
             setCurrentUser(profile);
           } else {
-            // This is a new user signing up via Google or an existing Google user logging in for the first time to THIS app.
-            // We get name, email, photoUrl from Google.
             const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'New Matcher');
             const newProfile: UserProfile = {
               id: user.uid,
-              email: user.email || '', 
-              name: defaultName, 
-              role: USER_ROLES.RECOMMENDER, // All signups are Recommenders
-              bio: 'Welcome! Please complete your matchmaker profile.', // Default bio for new users
-              photoUrl: user.photoURL || generateUniqueAvatarSvgDataUri(user.uid), 
-              privacySettings: defaultPrivacySettings, // Default privacy settings
+              email: user.email || '',
+              name: defaultName,
+              role: USER_ROLES.RECOMMENDER,
+              bio: 'Welcome! Please complete your matchmaker profile.',
+              photoUrl: user.photoURL || generateUniqueAvatarSvgDataUri(user.uid),
+              privacySettings: defaultPrivacySettings,
             };
-            await setUserProfile(newProfile); // Save this new profile to Firestore
+            await setUserProfile(newProfile);
             setCurrentUser(newProfile);
-            // Redirect to profile page for completion if it's a truly new profile or bio indicates first time
             if (typeof window !== 'undefined' && window.location.pathname !== '/profile') {
                 router.push('/profile');
             }
           }
         } catch (error: any) {
           console.error("AuthContext: Error fetching or setting up user profile:", error);
-          setCurrentUser(null); 
-          setFirebaseUser(null); 
+          setCurrentUser(null);
+          setFirebaseUser(null);
           if (error.code === 'permission-denied' || error.message.includes('Missing or insufficient permissions')) {
              toast({ variant: "destructive", title: "Access Error", description: "Could not load your profile. Please check permissions or contact support." });
           } else {
@@ -128,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [router, toast]); 
+  }, [router, toast]);
 
   const handleGoogleSignIn = async (isSignUp: boolean = false) => {
     if (firebaseInitializationError || !auth) {
@@ -140,17 +137,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle fetching/creating user profile from Firestore.
-      
-      const userProfile = await getUserProfile(result.user.uid); // Re-fetch to ensure we have the latest
+      const userProfile = await getUserProfile(result.user.uid);
 
       if (userProfile && userProfile.bio !== 'Welcome! Please complete your matchmaker profile.') {
-         // If profile exists and is somewhat complete, go to dashboard
          if (typeof window !== 'undefined' && (window.location.pathname === '/auth/login' || window.location.pathname === '/auth/signup')) {
             router.push('/dashboard');
         }
       } else {
-         // If profile is new or incomplete, go to profile page
          if (typeof window !== 'undefined' && window.location.pathname !== '/profile') {
              router.push('/profile');
          }
@@ -168,7 +161,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else if (error.message && error.message.includes('auth/network-request-failed')) {
         description = "Network error during sign-in. Please check your internet connection and try again.";
       }
-      // For the GetProjectConfig-are-blocked error specifically during signInWithPopup
       else if (error.code === 'auth/internal-error' && error.message.includes('GetProjectConfig')) {
         description = "Error fetching project configuration during Google Sign-In. Please ensure your API key is correct and unrestricted, and that the Identity Toolkit API is enabled. Check environment variables."
       }
@@ -185,7 +177,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signupWithGoogle = async () => {
     await handleGoogleSignIn(true);
   };
-  
+
   const logoutUser = async () => {
     if (firebaseInitializationError || !auth) {
       toast({ variant: "destructive", title: "Logout Error", description: "Firebase not initialized or auth service unavailable. Cannot log out." });
@@ -194,27 +186,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('activeFirebaseUserId');
       }
-      router.push('/auth/login'); 
+      router.push('/auth/login');
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
     try {
       await signOut(auth);
-      router.push('/auth/login'); 
+      router.push('/auth/login');
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
       console.error("Firebase logout error:", error);
       toast({ variant: "destructive", title: "Logout Failed", description: error.message });
     } finally {
-      setIsLoading(false); 
+      setIsLoading(false);
     }
   };
-  
+
   const isAuthenticated = !!firebaseUser && !!currentUser && currentUser.role === USER_ROLES.RECOMMENDER && !firebaseInitializationError;
 
   const updateUserProfile = async (updatedProfile: UserProfile) => {
-    if (firebaseInitializationError || !db) { 
+    if (firebaseInitializationError || !db) {
       toast({ variant: "destructive", title: "Update Error", description: "Firebase not initialized or DB unavailable. Cannot update profile." });
       return;
     }
@@ -224,21 +216,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         photoUrl: updatedProfile.photoUrl || firebaseUser.photoURL || generateUniqueAvatarSvgDataUri(firebaseUser.uid),
         privacySettings: updatedProfile.privacySettings || defaultPrivacySettings,
       };
-      await setUserProfile(profileToSave); 
-      setCurrentUser(profileToSave); 
+      await setUserProfile(profileToSave);
+      setCurrentUser(profileToSave);
     } else {
       toast({ variant: "destructive", title: "Update Error", description: "Cannot update profile. User mismatch or not logged in." });
     }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      currentUser, 
+    <AuthContext.Provider value={{
+      currentUser,
       firebaseUser,
-      isAuthenticated, 
-      loginWithGoogle, 
-      signupWithGoogle, 
-      logoutUser, 
+      isAuthenticated,
+      loginWithGoogle,
+      signupWithGoogle,
+      logoutUser,
       isLoading,
       updateUserProfile
       }}>
