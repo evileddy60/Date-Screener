@@ -3,9 +3,13 @@ import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-// Log the value of the API key environment variable as seen by the application
-console.log("Attempting to read NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
-console.log("Attempting to read NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+// Log the raw environment variables as read by the process
+console.log("RAW ENV: NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+console.log("RAW ENV: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:", process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN);
+console.log("RAW ENV: NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+console.log("RAW ENV: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:", process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET);
+console.log("RAW ENV: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:", process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID);
+console.log("RAW ENV: NEXT_PUBLIC_FIREBASE_APP_ID:", process.env.NEXT_PUBLIC_FIREBASE_APP_ID);
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,39 +20,74 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Log the configuration object that will be used
-console.log("Firebase configuration object being used:", firebaseConfig);
+console.log("Firebase Config Object to be used for initialization:", firebaseConfig);
 
-// Check if critical Firebase configuration values are defined.
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key") {
-  const errorMessage = "Firebase API Key is not defined or is still a placeholder. Please ensure NEXT_PUBLIC_FIREBASE_API_KEY is correctly set with your actual API key in your Firebase Studio project's environment variable settings.";
+  const errorMessage = "CRITICAL ERROR: Firebase API Key is UNDEFINED or is a PLACEHOLDER in firebaseConfig. Check environment variables. Value: " + firebaseConfig.apiKey;
   console.error(errorMessage);
   throw new Error(errorMessage);
 }
 
 if (!firebaseConfig.projectId) {
-  const errorMessage = "Firebase project ID is not defined in the configuration. Please ensure NEXT_PUBLIC_FIREBASE_PROJECT_ID environment variable is set correctly in your Firebase Studio project's environment variable settings.";
+  const errorMessage = "CRITICAL ERROR: Firebase Project ID is UNDEFINED in firebaseConfig. Check environment variables. Value: " + firebaseConfig.projectId;
   console.error(errorMessage);
   throw new Error(errorMessage);
 }
 
-// Initialize Firebase
+if (!firebaseConfig.authDomain) {
+  const errorMessage = "CRITICAL ERROR: Firebase Auth Domain is UNDEFINED in firebaseConfig. Check environment variables. Value: " + firebaseConfig.authDomain;
+  console.error(errorMessage);
+  throw new Error(errorMessage);
+}
+
+
 let app: FirebaseApp;
 if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-  console.log("Firebase App Initialized.");
+  try {
+    app = initializeApp(firebaseConfig);
+    console.log("Firebase App Initialized SUCCESSFULLY. App Name:", app.name);
+    if (app.options) {
+      console.log("Initialized App Options - Project ID:", app.options.projectId);
+      console.log("Initialized App Options - API Key used:", app.options.apiKey);
+      console.log("Initialized App Options - Auth Domain:", app.options.authDomain);
+    }
+  } catch (initError: any) {
+    console.error("CRITICAL: Firebase initialization FAILED:", initError);
+    console.error("Using firebaseConfig during failed init:", firebaseConfig);
+    throw initError;
+  }
 } else {
   app = getApp();
-  console.log("Firebase App Retrieved.");
+  console.log("Firebase App Retrieved (already initialized). App Name:", app.name);
+   if (app.options) {
+      console.log("Retrieved App Options - Project ID:", app.options.projectId);
+      console.log("Retrieved App Options - API Key used:", app.options.apiKey);
+      console.log("Retrieved App Options - Auth Domain:", app.options.authDomain);
+   }
 }
 
-const auth: Auth = getAuth(app);
-const db: Firestore = getFirestore(app);
-console.log("Firestore instance requested. DB Object:", db ? "Exists" : "Does Not Exist");
-if (db && db.app && db.app.options) {
-    console.log("Firestore project ID from instance:", db.app.options.projectId);
+let auth: Auth;
+let db: Firestore;
+
+try {
+  auth = getAuth(app);
+  console.log("Firebase Auth instance CREATED.");
+} catch (authError: any) {
+  console.error("CRITICAL: Firebase getAuth FAILED:", authError);
+  console.error("App object used for getAuth:", app);
+  throw authError;
 }
 
+try {
+  db = getFirestore(app);
+  console.log("Firebase Firestore instance CREATED.");
+  if (db && db.app && db.app.options) {
+      console.log("Firestore project ID from instance:", db.app.options.projectId);
+  }
+} catch (firestoreError: any) {
+  console.error("CRITICAL: Firebase getFirestore FAILED:", firestoreError);
+  console.error("App object used for getFirestore:", app);
+  throw firestoreError;
+}
 
 export { app, auth, db };
-
