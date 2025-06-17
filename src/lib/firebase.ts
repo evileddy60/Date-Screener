@@ -20,22 +20,22 @@ let firebaseInitializationError: string | null = null;
 const isServer = typeof window === 'undefined';
 
 if (isServer) {
-  // This log will appear in your Firebase Studio server logs
   console.log("SERVER_SIDE_FIREBASE_INIT: Using NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
 }
 
 // Check for placeholder or missing critical environment variables
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key" || !firebaseConfig.projectId) {
   let missingVars = [];
-  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key") missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY (is placeholder or missing)");
-  if (!firebaseConfig.projectId) missingVars.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID (is missing)");
+  if (!firebaseConfig.apiKey) missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY (is missing or undefined)");
+  if (firebaseConfig.apiKey === "your_firebase_api_key") missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY (is still the placeholder 'your_firebase_api_key' - **THIS MUST BE FIXED IN FIREBASE STUDIO ENVIRONMENT VARIABLE SETTINGS UI**)");
+  if (!firebaseConfig.projectId) missingVars.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID (is missing or undefined)");
 
-  const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required environment variables are missing or are placeholders: ${missingVars.join(', ')}. Firebase cannot initialize. Please set them correctly in your project environment. API Key Used: ${firebaseConfig.apiKey}, Project ID Used: ${firebaseConfig.projectId}`;
+  const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required environment variables are missing, placeholders, or undefined in your Firebase Studio project settings: ${missingVars.join(', ')}. Firebase cannot initialize. Please set them correctly in your project's environment variable settings in the Firebase Studio UI. API Key Used by code: '${firebaseConfig.apiKey}', Project ID Used by code: '${firebaseConfig.projectId}'`;
 
   if (!firebaseInitializationError) {
     firebaseInitializationError = errorMessage;
   }
-  console.error("FIREBASE_CONFIG_ERROR:", errorMessage);
+  console.error("FIREBASE_CONFIG_ERROR_IN_CODE:", errorMessage);
 }
 
 
@@ -49,15 +49,15 @@ if (!firebaseInitializationError) {
     auth = getAuth(app);
     db = getFirestore(app);
   } catch (error: any) {
-    let detailedErrorMessage = `CRITICAL: Firebase initialization of core services FAILED. This often happens if environment variables (API Key, Project ID) are incorrect or missing, or if the Identity Toolkit API is not enabled, or due to network issues/restrictions.
+    let detailedErrorMessage = `CRITICAL: Firebase initialization of core services FAILED. This often happens if environment variables (API Key, Project ID) are incorrect/missing in your Firebase Studio project settings, or if the Identity Toolkit API is not enabled in Google Cloud, or due to network issues/restrictions.
     Error: ${error.message || error}
-    Config used:
-      API Key: '${firebaseConfig.apiKey}' (This is the value your build process sees)
-      Project ID: '${firebaseConfig.projectId}'
-      Auth Domain: '${firebaseConfig.authDomain}'
+    Config used by the code:
+      API Key: '${firebaseConfig.apiKey}' (This is the value your build process sees for NEXT_PUBLIC_FIREBASE_API_KEY)
+      Project ID: '${firebaseConfig.projectId}' (from NEXT_PUBLIC_FIREBASE_PROJECT_ID)
+      Auth Domain: '${firebaseConfig.authDomain}' (from NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN)
     Please verify:
-    1. NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_PROJECT_ID are correctly set in your Firebase Studio environment variables.
-    2. The API Key is unrestricted or allows 'Identity Toolkit API' in Google Cloud Console.
+    1. NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, and other NEXT_PUBLIC_FIREBASE_... variables are correctly set in your Firebase Studio environment variable settings UI.
+    2. The API Key (${firebaseConfig.apiKey}) is unrestricted or allows 'Identity Toolkit API' in Google Cloud Console.
     3. 'Identity Toolkit API' is enabled in Google Cloud Console for project '${firebaseConfig.projectId}'.
     4. Your Google Cloud project billing is active.
     5. Network connectivity to Firebase services.`;
@@ -79,8 +79,7 @@ if (!firebaseInitializationError) {
 }
 
 if (firebaseInitializationError && auth === undefined && db === undefined) {
-  // This log ensures the error is highly visible if initialization failed at any point.
-  console.error("Firebase Initialization resulted in an error, Auth and DB services are unavailable:", firebaseInitializationError);
+  console.error("Firebase Initialization resulted in an error, Auth and DB services are unavailable. Review previous logs for details. This usually requires fixing environment variables in Firebase Studio settings.", firebaseInitializationError);
 }
 
 
