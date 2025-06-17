@@ -39,6 +39,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Log the API key the client-side sees
+    console.log("CLIENT_SIDE_AUTH_CONTEXT: NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+
     if (firebaseInitializationError) {
       console.error("AuthContext: Firebase did not initialize correctly, AuthProvider will not proceed.", firebaseInitializationError);
       if (typeof window !== 'undefined') {
@@ -52,7 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       return;
     }
-    if (!auth) { // Check if auth object is available
+    if (!auth) { 
       console.error("AuthContext: Firebase auth instance is not available. Firebase might not have initialized correctly or is blocked.");
       if (typeof window !== 'undefined') {
         toast({ 
@@ -123,7 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [router, toast]); // auth is not directly in deps as its availability is checked inside
+  }, [router, toast]); 
 
   const handleGoogleSignIn = async (isSignUp: boolean = false) => {
     if (firebaseInitializationError || !auth) {
@@ -135,15 +138,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      const userProfile = await getUserProfile(result.user.uid); // This ensures profile is fetched/created
+      // User profile is fetched/created by onAuthStateChanged
       
-      // onAuthStateChanged will set currentUser. Here we ensure redirection logic.
+      const userProfile = await getUserProfile(result.user.uid); 
+
       if (userProfile && userProfile.bio !== 'Welcome! Please complete your matchmaker profile.') {
          if (typeof window !== 'undefined' && (window.location.pathname === '/auth/login' || window.location.pathname === '/auth/signup')) {
             router.push('/dashboard');
         }
       } else {
-        // New user or profile needs completion, onAuthStateChanged should redirect to /profile
          if (typeof window !== 'undefined' && window.location.pathname !== '/profile') {
              router.push('/profile');
          }
@@ -203,7 +206,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!firebaseUser && !!currentUser && currentUser.role === USER_ROLES.RECOMMENDER && !firebaseInitializationError;
 
   const updateUserProfile = async (updatedProfile: UserProfile) => {
-    if (firebaseInitializationError || !db) { // Check for db too
+    if (firebaseInitializationError || !db) { 
       toast({ variant: "destructive", title: "Update Error", description: "Firebase not initialized or DB unavailable. Cannot update profile." });
       return;
     }
