@@ -118,13 +118,22 @@ export default function PotentialMatchDetailPage() {
         updatedAt: new Date().toISOString()
     };
 
+    // Ensure friend statuses are set to pending if not already decided
+    if (potentialMatch.statusFriendA !== 'accepted' && potentialMatch.statusFriendA !== 'rejected') {
+        updatedFields.statusFriendA = 'pending';
+    }
+    if (potentialMatch.statusFriendB !== 'accepted' && potentialMatch.statusFriendB !== 'rejected') {
+        updatedFields.statusFriendB = 'pending';
+    }
+
+
     try {
         await updatePotentialMatch({ ...potentialMatch, ...updatedFields } as PotentialMatch);
         setPotentialMatch(prev => prev ? { ...prev, ...updatedFields } as PotentialMatch : null);
         toast({
             title: "Introduction Emails (Simulated) Sent!",
-            description: `Emails would be sent to ${profileCardA.friendName} (via ${profileCardA.friendEmail || 'their contact'}) and ${profileCardB.friendName} (via ${profileCardB.friendEmail || 'their contact'}).`,
-            duration: 5000,
+            description: `Emails would be sent to ${profileCardA.friendName} (via ${profileCardA.friendEmail || 'their contact'}) and ${profileCardB.friendName} (via ${profileCardB.friendEmail || 'their contact'}). Their response status is now pending.`,
+            duration: 7000,
         });
     } catch (error) {
         console.error("Error simulating email send:", error);
@@ -238,7 +247,7 @@ export default function PotentialMatchDetailPage() {
                         <h4 className="font-semibold text-foreground/80 mb-1">Preferences:</h4>
                         <ul className="list-disc list-inside text-xs text-muted-foreground">
                           {card.preferences.ageRange && <li>Age: {card.preferences.ageRange}</li>}
-                          {card.preferences.seeking && <li>Seeking: {card.preferences.seeking}</li>}
+                          {card.preferences.seeking && Array.isArray(card.preferences.seeking) && card.preferences.seeking.length > 0 && <li>Seeking: {card.preferences.seeking.join(', ')}</li>}
                           {card.preferences.location && <li>Location: {card.preferences.location}</li>}
                           {card.preferences.gender && <li>Gender: {card.preferences.gender}</li>}
                         </ul>
@@ -360,3 +369,4 @@ export default function PotentialMatchDetailPage() {
     </div>
   );
 }
+
