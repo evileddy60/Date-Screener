@@ -16,6 +16,7 @@ const firebaseConfig = {
 // Check if projectId is defined. If not, Firestore (and other services) won't know where to connect.
 // This is a common reason for "client is offline" or similar connection errors with Firestore.
 if (!firebaseConfig.projectId) {
+  console.error("Firebase project ID is NOT defined in the configuration. Please ensure NEXT_PUBLIC_FIREBASE_PROJECT_ID environment variable is set correctly.");
   throw new Error(
     "Firebase project ID is not defined in the configuration. Please ensure NEXT_PUBLIC_FIREBASE_PROJECT_ID environment variable is set correctly."
   );
@@ -25,11 +26,14 @@ if (!firebaseConfig.projectId) {
 let app: FirebaseApp;
 if (!getApps().length) {
   app = initializeApp(firebaseConfig);
+  console.log("Firebase App Initialized.");
 } else {
   app = getApp();
+  console.log("Firebase App Retrieved.");
 }
 
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
+console.log("Firestore instance requested. DB Object:", db ? "Exists" : "Does Not Exist");
 
 export { app, auth, db };
