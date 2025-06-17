@@ -5,44 +5,25 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription }
-from "@/components/ui/alert";
-import { UserPlus, Sparkles, Loader2, Info } from 'lucide-react';
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { UserPlus, Sparkles, Loader2, Info, Chrome } from 'lucide-react'; // Added Chrome for Google Icon
 
 export default function SignupPage() {
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState(''); 
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const { signupUser, isLoading } = useAuth();
-  const [error, setError] = useState('');
+  const { signupWithGoogle, isLoading } = useAuth();
+  const [error, setError] = useState(''); // Retained for non-Google errors like not agreeing to terms
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleSignup = async () => {
     setError('');
-    if (!email || !name || !password || !confirmPassword) {
-      setError('Please fill in all fields.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
     if (!agreedToTerms) {
       setError('You must agree to the terms and conditions to sign up.');
       return;
     }
-    
-    await signupUser(email, password, name);
+    await signupWithGoogle();
+    // Errors from signupWithGoogle are handled by toast in AuthContext
   };
 
   return (
@@ -54,63 +35,9 @@ export default function SignupPage() {
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
           <CardTitle className="font-headline text-3xl text-primary">Create Your Matchmaker Account</CardTitle>
-          <CardDescription className="font-body">Join our community to help your friends find their perfect match.</CardDescription>
+          <CardDescription className="font-body">Join our community by signing up with Google.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="font-body text-foreground/80">Full Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Your Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="font-body bg-card"
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email" className="font-body text-foreground/80">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="font-body bg-card"
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="font-body text-foreground/80">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="•••••••• (min. 6 characters)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="font-body bg-card"
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="font-body text-foreground/80">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="font-body bg-card"
-                disabled={isLoading}
-              />
-            </div>
-
+        <CardContent className="space-y-6">
             <Alert variant="default" className="bg-secondary/20 border-secondary/30">
               <Info className="h-4 w-4 text-secondary-foreground" />
               <AlertDescription className="font-body text-xs text-secondary-foreground/80 space-y-1">
@@ -135,22 +62,21 @@ export default function SignupPage() {
               </Label>
             </div>
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-destructive text-center">{error}</p>}
             <Button 
-              type="submit" 
+              onClick={handleGoogleSignup}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-body text-lg py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105" 
               disabled={isLoading || !agreedToTerms}
             >
-              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <UserPlus className="mr-2 h-5 w-5" />}
-              Sign Up as a Matchmaker
+              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Chrome className="mr-2 h-5 w-5" />}
+              Sign Up with Google
             </Button>
-          </form>
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="font-body text-sm text-muted-foreground">
             Already have an account?{' '}
             <Button variant="link" asChild className="text-primary p-0 h-auto font-body">
-              <Link href="/auth/login">Login</Link>
+              <Link href="/auth/login">Login with Google</Link>
             </Button>
           </p>
         </CardFooter>
