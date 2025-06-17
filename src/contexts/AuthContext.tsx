@@ -39,8 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Log the API key the client-side sees
-    console.log("CLIENT_SIDE_AUTH_CONTEXT: NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+    // console.log("CLIENT_SIDE_AUTH_CONTEXT: NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY); // Removed diagnostic log
 
     if (firebaseInitializationError) {
       console.error("AuthContext: Firebase did not initialize correctly, AuthProvider will not proceed.", firebaseInitializationError);
@@ -89,18 +88,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
             setCurrentUser(profile);
           } else {
+            // This is a new user signing up via Google or an existing Google user logging in for the first time to THIS app.
+            // We get name, email, photoUrl from Google.
             const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'New Matcher');
             const newProfile: UserProfile = {
               id: user.uid,
               email: user.email || '', 
               name: defaultName, 
-              role: USER_ROLES.RECOMMENDER,
-              bio: 'Welcome! Please complete your matchmaker profile.',
+              role: USER_ROLES.RECOMMENDER, // All signups are Recommenders
+              bio: 'Welcome! Please complete your matchmaker profile.', // Default bio for new users
               photoUrl: user.photoURL || generateUniqueAvatarSvgDataUri(user.uid), 
-              privacySettings: defaultPrivacySettings,
+              privacySettings: defaultPrivacySettings, // Default privacy settings
             };
-            await setUserProfile(newProfile); 
+            await setUserProfile(newProfile); // Save this new profile to Firestore
             setCurrentUser(newProfile);
+            // Redirect to profile page for completion if it's a truly new profile or bio indicates first time
             if (typeof window !== 'undefined' && window.location.pathname !== '/profile') {
                 router.push('/profile');
             }
@@ -138,15 +140,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // User profile is fetched/created by onAuthStateChanged
+      // onAuthStateChanged will handle fetching/creating user profile from Firestore.
       
-      const userProfile = await getUserProfile(result.user.uid); 
+      const userProfile = await getUserProfile(result.user.uid); // Re-fetch to ensure we have the latest
 
       if (userProfile && userProfile.bio !== 'Welcome! Please complete your matchmaker profile.') {
+         // If profile exists and is somewhat complete, go to dashboard
          if (typeof window !== 'undefined' && (window.location.pathname === '/auth/login' || window.location.pathname === '/auth/signup')) {
             router.push('/dashboard');
         }
       } else {
+         // If profile is new or incomplete, go to profile page
          if (typeof window !== 'undefined' && window.location.pathname !== '/profile') {
              router.push('/profile');
          }
@@ -163,6 +167,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description = "Sign-in popup was blocked by the browser. Please allow popups for this site and try again.";
       } else if (error.message && error.message.includes('auth/network-request-failed')) {
         description = "Network error during sign-in. Please check your internet connection and try again.";
+      }
+      // For the GetProjectConfig-are-blocked error specifically during signInWithPopup
+      else if (error.code === 'auth/internal-error' && error.message.includes('GetProjectConfig')) {
+        description = "Error fetching project configuration during Google Sign-In. Please ensure your API key is correct and unrestricted, and that the Identity Toolkit API is enabled. Check environment variables."
       }
       toast({ variant: "destructive", title: isSignUp ? "Sign-Up Failed" : "Sign-In Failed", description });
     } finally {

@@ -19,31 +19,22 @@ let firebaseInitializationError: string | null = null;
 
 const isServer = typeof window === 'undefined';
 
-if (isServer) {
-  console.log("SERVER_SIDE_FIREBASE_INIT: Using NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
-  if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "your_firebase_api_key") {
-    console.error("SERVER_SIDE_FIREBASE_INIT_ERROR: NEXT_PUBLIC_FIREBASE_API_KEY is missing, is a placeholder, or was not correctly passed to the server environment!");
-    firebaseInitializationError = "SERVER_SIDE_FIREBASE_INIT_ERROR: NEXT_PUBLIC_FIREBASE_API_KEY is missing or invalid.";
-  }
-  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-    console.error("SERVER_SIDE_FIREBASE_INIT_ERROR: NEXT_PUBLIC_FIREBASE_PROJECT_ID is missing or was not correctly passed to the server environment!");
-    if (!firebaseInitializationError) {
-        firebaseInitializationError = "SERVER_SIDE_FIREBASE_INIT_ERROR: NEXT_PUBLIC_FIREBASE_PROJECT_ID is missing or invalid.";
-    }
-  }
-}
+// This explicit server-side log for API key can be re-enabled if client-side verification isn't enough
+// if (isServer) {
+//   console.log("SERVER_SIDE_FIREBASE_INIT: Using NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+// }
 
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key" || !firebaseConfig.projectId) {
   let missingVars = [];
   if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key") missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY");
   if (!firebaseConfig.projectId) missingVars.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
   
-  const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required environment variables are missing or are placeholders: ${missingVars.join(', ')}. Firebase cannot initialize. Please set them correctly in your project environment.`;
+  const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required environment variables are missing or are placeholders: ${missingVars.join(', ')}. Firebase cannot initialize. Please set them correctly in your project environment. API Key Used: ${firebaseConfig.apiKey}, Project ID Used: ${firebaseConfig.projectId}`;
   
   if (!firebaseInitializationError) {
     firebaseInitializationError = errorMessage;
   }
-  console.error("FIREBASE_CONFIG_ERROR (will show in server or client logs):", errorMessage);
+  console.error("FIREBASE_CONFIG_ERROR:", errorMessage);
 }
 
 
@@ -54,11 +45,10 @@ if (!firebaseInitializationError) {
     } else {
       app = getApp();
     }
-    // If app initialization succeeded, try to get auth and db
     auth = getAuth(app);
     db = getFirestore(app);
   } catch (error: any) {
-    const errorMessage = `CRITICAL: Firebase initialization of core services FAILED: ${error.message || error}. Config used: ${JSON.stringify(firebaseConfig)}`;
+    const errorMessage = `CRITICAL: Firebase initialization of core services FAILED: ${error.message || error}. This often happens if environment variables (API Key, Project ID) are incorrect or missing. Config used: apiKey='${firebaseConfig.apiKey}', projectId='${firebaseConfig.projectId}'.`;
     console.error("FIREBASE_INIT_ERROR (core services):", errorMessage);
     firebaseInitializationError = errorMessage;
     app = undefined; 
@@ -67,17 +57,13 @@ if (!firebaseInitializationError) {
   }
 }
 
-// Explicitly log and ensure auth/db are undefined if there was any initialization error
 if (firebaseInitializationError) {
   console.error("Firebase Initialization Error means Auth and DB services may be unavailable:", firebaseInitializationError);
   auth = undefined; 
   db = undefined;
 }
 
-
 if (!isServer && typeof window !== 'undefined' && firebaseInitializationError) {
-  // This helps to see the error on the client side during development if it happened during server init
-  // and wasn't caught by a UI notification elsewhere.
   console.error("Firebase Initialization Error (Client-side notification of potential server init issue):", firebaseInitializationError);
 }
 
