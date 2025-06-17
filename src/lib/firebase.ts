@@ -3,7 +3,10 @@ import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-// Direct configuration object as provided
+// Log the value of the API key environment variable as seen by the application
+console.log("Attempting to read NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+console.log("Attempting to read NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -24,7 +27,7 @@ if (!firebaseConfig.apiKey) {
 }
 
 if (!firebaseConfig.projectId) {
-  const errorMessage = "Firebase project ID is not defined. Please ensure NEXT_PUBLIC_FIREBASE_PROJECT_ID is correctly set in your Firebase Studio project's environment variable settings. This is crucial for Firestore and other services.";
+  const errorMessage = "Firebase project ID is not defined in the configuration. Please ensure NEXT_PUBLIC_FIREBASE_PROJECT_ID environment variable is set correctly in your Firebase Studio project's environment variable settings.";
   console.error(errorMessage);
   throw new Error(errorMessage);
 }
