@@ -39,17 +39,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Log the env vars the client-side sees - important for debugging .env setup
-    if (typeof window !== 'undefined') {
-      console.log("CLIENT_SIDE_AUTH_CONTEXT: NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
-      console.log("CLIENT_SIDE_AUTH_CONTEXT: NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
-    }
-
     if (firebaseInitializationError) {
       console.error("AuthContext: Firebase did not initialize correctly, AuthProvider will not proceed.", firebaseInitializationError);
       if (typeof window !== 'undefined') {
-        // Only show toast if the error is the generic init error from firebase.ts
-        // Specific errors like unauthorized-domain are handled elsewhere or become apparent during usage.
         if (firebaseInitializationError.startsWith("CRITICAL FIREBASE ENV VAR ERROR") || firebaseInitializationError.startsWith("CRITICAL: Firebase initialization of core services FAILED")) {
           toast({
             variant: "destructive",
@@ -143,7 +135,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const handleGoogleSignIn = async (isSignUp: boolean = false) => {
     if (firebaseInitializationError || !auth) {
-      // The firebaseInitializationError toast is now handled in the useEffect, so just log here or have a more generic toast.
       console.error("handleGoogleSignIn: Firebase not initialized or auth service unavailable.", firebaseInitializationError);
       toast({ variant: "destructive", title: "Sign-in Error", description: `Firebase services are not ready. Please check the console for critical Firebase errors.` });
       setIsLoading(false);
@@ -153,10 +144,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // Profile creation/fetching is handled by onAuthStateChanged.
       toast({ title: isSignUp ? "Sign-Up Successful!" : "Sign-In Successful!", description: "Welcome to Date Screener!" });
       if (typeof window !== 'undefined' && (window.location.pathname === '/auth/login' || window.location.pathname === '/auth/signup')) {
-         router.push('/dashboard'); // Optimistic navigation
+         router.push('/dashboard'); 
       }
 
     } catch (error: any) {
