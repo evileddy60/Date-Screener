@@ -33,20 +33,28 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     if (userProfileSnap.exists()) {
       return { id: userProfileSnap.id, ...userProfileSnap.data() } as UserProfile;
     }
+    console.log(`User profile with ID ${userId} not found in Firestore.`);
     return null;
   } catch (error) {
     console.error("Error fetching user profile:", error);
-    throw error; // Re-throw the error so it can be caught by the caller
+    // It's important to re-throw or handle it so AuthContext knows about the failure.
+    throw error; 
   }
 }
 
 export async function setUserProfile(userProfile: UserProfile): Promise<void> {
   if (!userProfile || !userProfile.id) {
-    console.error("setUserProfile called with invalid userProfile data");
-    return;
+    console.error("setUserProfile called with invalid userProfile data:", userProfile);
+    // throw new Error("setUserProfile: Invalid userProfile data or missing ID.");
+    return; // Or throw error
   }
   const userProfileRef = doc(db, USER_PROFILES_COLLECTION, userProfile.id);
-  await setDoc(userProfileRef, userProfile, { merge: true });
+  try {
+    await setDoc(userProfileRef, userProfile, { merge: true });
+  } catch (error) {
+    console.error("Error setting user profile:", error);
+    throw error;
+  }
 }
 
 

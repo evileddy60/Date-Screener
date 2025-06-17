@@ -15,7 +15,6 @@ import {
   signOut 
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
-// mockUserProfiles is removed from here as AuthContext will now rely on Firestore for user profiles
 import { generateUniqueAvatarSvgDataUri } from '@/lib/utils'; 
 import { getUserProfile, setUserProfile } from '@/lib/firestoreService'; // Import Firestore functions
 
@@ -27,7 +26,7 @@ interface AuthContextType {
   signupUser: (email: string, password_unused?: string, name?: string) => Promise<void>; 
   logoutUser: () => Promise<void>;
   isLoading: boolean;
-  updateUserProfile: (updatedProfile: UserProfile) => Promise<void>; // Changed to Promise
+  updateUserProfile: (updatedProfile: UserProfile) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,46 +39,59 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => { // Made async
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
       if (user) {
         setFirebaseUser(user);
-        let profile = await getUserProfile(user.uid); // Fetch from Firestore
-        
-        if (profile) {
-          // Ensure privacySettings exist, apply defaults if not
-          if (!profile.privacySettings) {
-            profile.privacySettings = defaultPrivacySettings;
-            await setUserProfile(profile); // Save updated profile to Firestore
+        try {
+          let profile = await getUserProfile(user.uid); 
+          
+          if (profile) {
+            if (!profile.privacySettings) {
+              profile.privacySettings = defaultPrivacySettings;
+              // No need to await setUserProfile here if it's just defaulting, 
+              // but if critical for immediate next steps, can await.
+              // For now, let's assume UI can handle transient state if settings are immediately used.
+            }
+            setCurrentUser(profile);
+          } else {
+            // Profile not in Firestore, create default and save it
+            const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'New Matcher');
+            const newProfile: UserProfile = {
+              id: user.uid,
+              email: user.email || '',
+              name: defaultName,
+              role: USER_ROLES.RECOMMENDER,
+              bio: 'Welcome! Please complete your matchmaker profile.',
+              photoUrl: user.photoURL || generateUniqueAvatarSvgDataUri(user.uid), 
+              privacySettings: defaultPrivacySettings,
+            };
+            await setUserProfile(newProfile); 
+            setCurrentUser(newProfile);
           }
-          setCurrentUser(profile);
-        } else {
-          // Profile not in Firestore, create default and save it
-          const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'New Matcher');
-          const newProfile: UserProfile = {
-            id: user.uid,
-            email: user.email || '',
-            name: defaultName,
-            role: USER_ROLES.RECOMMENDER,
-            bio: 'Welcome! Please complete your matchmaker profile.',
-            photoUrl: user.photoURL || generateUniqueAvatarSvgDataUri(user.uid), 
-            privacySettings: defaultPrivacySettings,
-          };
-          await setUserProfile(newProfile); // Save new profile to Firestore
-          setCurrentUser(newProfile);
+        } catch (error: any) {
+          console.error("AuthContext: Error fetching or setting up user profile:", error);
+          // If profile fetch fails due to permissions, user might be stuck in loading or redirected.
+          // Depending on rules, they might not even be able to create their own profile.
+          // This error needs to be handled gracefully, perhaps by redirecting to an error page or login.
+          setCurrentUser(null); // Ensure no stale/partial user data
+          setFirebaseUser(null); // Log out Firebase user state if profile is inaccessible
+          if (error.code === 'permission-denied' || error.message.includes('Missing or insufficient permissions')) {
+             toast({ variant: "destructive", title: "Access Error", description: "Could not load your profile. Please check permissions or contact support." });
+             // Consider redirecting to login after a delay or if not already on login
+             // router.push('/auth/login');
+          }
         }
       } else {
         setFirebaseUser(null);
         setCurrentUser(null);
-        // localStorage cleanup for activeFirebaseUserId can remain if other parts of app use it,
-        // but userProfile-uid is no longer the source of truth
         localStorage.removeItem('activeFirebaseUserId'); 
       }
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [router, toast]); // Added router and toast to dependency array
 
   const loginUser = async (email: string, password_for_firebase: string) => {
     setIsLoading(true);
@@ -112,9 +124,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         privacySettings: defaultPrivacySettings,
       };
       
-      await setUserProfile(newUserProfile); // Save to Firestore
+      await setUserProfile(newUserProfile); 
       setCurrentUser(newUserProfile); 
-      // No need to set activeFirebaseUserId in localStorage here, onAuthStateChanged handles it
       
       router.push('/profile'); 
       toast({ title: "Signup Successful!", description: "Welcome! Please complete your profile." });
@@ -130,10 +141,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signOut(auth);
-      // currentUser and firebaseUser will be set to null by onAuthStateChanged
       router.push('/auth/login');
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
-    } catch (error: any) { // Corrected: Added opening curly brace
+    } catch (error: any) {
       console.error("Firebase logout error:", error);
       toast({ variant: "destructive", title: "Logout Failed", description: error.message });
     } finally {
@@ -143,15 +153,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const isAuthenticated = !!firebaseUser && !!currentUser && currentUser.role === USER_ROLES.RECOMMENDER;
 
-  const updateUserProfile = async (updatedProfile: UserProfile) => { // Made async
+  const updateUserProfile = async (updatedProfile: UserProfile) => {
     if (firebaseUser && firebaseUser.uid === updatedProfile.id) {
       const profileToSave = {
         ...updatedProfile,
         privacySettings: updatedProfile.privacySettings || defaultPrivacySettings,
       };
-      await setUserProfile(profileToSave); // Save to Firestore
+      await setUserProfile(profileToSave); 
       setCurrentUser(profileToSave); 
-      // No localStorage update needed here
     } else {
       toast({ variant: "destructive", title: "Update Error", description: "Cannot update profile. User mismatch or not logged in." });
     }
