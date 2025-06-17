@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({
           variant: "destructive",
           title: "Firebase Critical Error",
-          description: "Firebase services could not be initialized. Some features may not work. Please check console & Firebase configuration in src/lib/firebase.ts.",
+          description: `Firebase services could not be initialized. Some features may not work. Error: ${firebaseInitializationError}`,
           duration: 10000
         });
       }
@@ -139,7 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const handleGoogleSignIn = async (isSignUp: boolean = false) => {
     if (firebaseInitializationError || !auth) {
-      toast({ variant: "destructive", title: "Sign-in Error", description: "Firebase not initialized or auth service unavailable. Cannot sign in. Check Firebase configuration in src/lib/firebase.ts." });
+      toast({ variant: "destructive", title: "Sign-in Error", description: `Firebase not initialized or auth service unavailable. Cannot sign in. Error: ${firebaseInitializationError || 'Auth service missing.'}` });
       setIsLoading(false);
       return;
     }
@@ -147,26 +147,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // Profile creation/fetching is handled by onAuthStateChanged, so no need to duplicate here.
-      // We just need to ensure onAuthStateChanged runs and picks up the new user.
-      // If profile is new, onAuthStateChanged will redirect to /profile.
-      // If profile exists, it will load it.
-      // We can directly try to navigate to dashboard or profile based on a quick check.
-      const userProfile = await getUserProfile(result.user.uid); // Quick check if profile might exist
-      
-      if (userProfile && userProfile.bio !== 'Welcome! Please complete your matchmaker profile.') {
-         if (typeof window !== 'undefined' && (window.location.pathname === '/auth/login' || window.location.pathname === '/auth/signup')) {
-            router.push('/dashboard');
-        }
-      } else {
-         // This implies either new profile or incomplete one, onAuthStateChanged will handle redirection to /profile
-         // For an explicit push here, ensure it doesn't conflict with onAuthStateChanged's logic.
-         // A simple success toast is good.
-         if (typeof window !== 'undefined' && window.location.pathname !== '/profile') {
-             // router.push('/profile'); // onAuthStateChanged should manage this
-         }
-      }
+      // Profile creation/fetching is handled by onAuthStateChanged.
+      // A simple success toast is good.
       toast({ title: isSignUp ? "Sign-Up Successful!" : "Sign-In Successful!", description: "Welcome to Date Screener!" });
+      // onAuthStateChanged will handle redirection logic
+      if (typeof window !== 'undefined' && (window.location.pathname === '/auth/login' || window.location.pathname === '/auth/signup')) {
+         router.push('/dashboard'); // Optimistic navigation
+      }
+
     } catch (error: any) {
       console.error("Firebase Google sign-in error:", error);
       let description = "Could not sign in with Google. Please try again.";
@@ -179,12 +167,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else if (error.message && error.message.includes('auth/network-request-failed')) {
         description = "Network error during sign-in. Please check your internet connection and try again.";
       } else if (error.code === 'auth/unauthorized-domain') {
-        description = "This domain is not authorized for OAuth operations for this application. Please add it in your Firebase console under Authentication > Settings > Authorized domains.";
+        description = "This domain is not authorized for OAuth operations. Please add it in your Firebase console (Authentication > Settings > Authorized domains).";
       }
       else if (error.code === 'auth/internal-error' && error.message && (error.message.includes('GetProjectConfig') || error.message.includes('getProjectConfig'))) {
-        description = "Error fetching project configuration during Google Sign-In. Please ensure your API key in src/lib/firebase.ts is correct, and that the Identity Toolkit API is enabled in Google Cloud Console."
+        description = "Error fetching project configuration during Google Sign-In. Ensure API key is correct in Firebase Studio env vars & Identity Toolkit API is enabled in Google Cloud."
       } else if (error.message && error.message.includes('GetProjectConfig-are-blocked')) {
-         description = "Requests to fetch Firebase project configuration are blocked. This is often due to an incorrect or restricted API key, or issues with the Identity Toolkit API being enabled in Google Cloud Console, or billing."
+         description = "Requests to fetch Firebase project configuration are blocked. Check API key in Firebase Studio env vars, Identity Toolkit API status in GCP, and billing."
       }
       toast({ variant: "destructive", title: isSignUp ? "Sign-Up Failed" : "Sign-In Failed", description });
     } finally {
@@ -203,7 +191,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logoutUser = async () => {
     if (firebaseInitializationError || !auth) {
       toast({ variant: "destructive", title: "Logout Error", description: "Firebase not initialized or auth service unavailable. Cannot log out." });
-      // Clear local state even if Firebase call might fail
       setFirebaseUser(null);
       setCurrentUser(null);
       if (typeof window !== 'undefined') {
@@ -216,20 +203,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signOut(auth);
-      // Clear local state after successful sign out
-      // setFirebaseUser(null); // onAuthStateChanged will handle this
-      // setCurrentUser(null); // onAuthStateChanged will handle this
-      router.push('/auth/login'); // Redirect after state is cleared by onAuthStateChanged
+      router.push('/auth/login'); 
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
       console.error("Firebase logout error:", error);
       toast({ variant: "destructive", title: "Logout Failed", description: error.message });
     } finally {
-      setIsLoading(false); // Ensure loading is set to false
+      setIsLoading(false); 
     }
   };
   
-  // isAuthenticated depends on both firebaseUser and currentUser having the correct role
   const isAuthenticated = !!firebaseUser && !!currentUser && currentUser.role === USER_ROLES.RECOMMENDER && !firebaseInitializationError;
 
   const updateUserProfile = async (updatedProfile: UserProfile) => {
@@ -238,16 +221,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     if (firebaseUser && firebaseUser.uid === updatedProfile.id) {
-      // Ensure essential fields like photoUrl and privacySettings are preserved or defaulted
       const profileToSave = {
         ...updatedProfile,
         photoUrl: updatedProfile.photoUrl || firebaseUser.photoURL || generateUniqueAvatarSvgDataUri(firebaseUser.uid),
         privacySettings: updatedProfile.privacySettings || defaultPrivacySettings,
       };
       await setUserProfile(profileToSave);
-      setCurrentUser(profileToSave); // Update context immediately
+      setCurrentUser(profileToSave); 
     } else {
-      // This case should ideally not be reached if UI is driven by authenticated state
       toast({ variant: "destructive", title: "Update Error", description: "Cannot update profile. User mismatch or not logged in." });
     }
   };
