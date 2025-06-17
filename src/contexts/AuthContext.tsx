@@ -39,8 +39,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Client-side log to see which API key is being used by the browser
-    console.log("CLIENT_SIDE_AUTH_CONTEXT: NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+    // Diagnostic log removed as firebase.ts is now using hardcoded config.
+    // console.log("CLIENT_SIDE_AUTH_CONTEXT: NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
 
     if (firebaseInitializationError) {
       console.error("AuthContext: Firebase did not initialize correctly, AuthProvider will not proceed.", firebaseInitializationError);
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({
           variant: "destructive",
           title: "Firebase Critical Error",
-          description: "Firebase services could not be initialized. Some features may not work. Please check console & environment variables in Firebase Studio settings.",
+          description: "Firebase services could not be initialized. Some features may not work. Please check console & environment variables or hardcoded config in src/lib/firebase.ts.",
           duration: 10000
         });
       }
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({
             variant: "destructive",
             title: "Firebase Auth Error",
-            description: "Authentication service is unavailable. This might be due to a configuration issue or network block. Please check console and Firebase Studio environment settings.",
+            description: "Authentication service is unavailable. This might be due to a configuration issue or network block. Please check console and Firebase configuration.",
             duration: 10000
         });
       }
@@ -112,7 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (error.code === 'permission-denied' || error.message.includes('Missing or insufficient permissions')) {
              toast({ variant: "destructive", title: "Access Error", description: "Could not load your profile. Please check Firestore rules or contact support." });
           } else if (error.message && error.message.includes('GetProjectConfig-are-blocked')) {
-            toast({ variant: "destructive", title: "Firebase Config Error", description: "Failed to get project config. Check API key & Firebase/Google Cloud project settings." });
+            toast({ variant: "destructive", title: "Firebase Config Error", description: "Failed to get project config. Check API key (if used) & Firebase/Google Cloud project settings." });
           }
           else {
             toast({ variant: "destructive", title: "Profile Error", description: `Failed to load profile: ${error.message}` });
@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const handleGoogleSignIn = async (isSignUp: boolean = false) => {
     if (firebaseInitializationError || !auth) {
-      toast({ variant: "destructive", title: "Sign-in Error", description: "Firebase not initialized or auth service unavailable. Cannot sign in. Check Firebase Studio environment settings." });
+      toast({ variant: "destructive", title: "Sign-in Error", description: "Firebase not initialized or auth service unavailable. Cannot sign in. Check Firebase configuration in src/lib/firebase.ts." });
       setIsLoading(false);
       return;
     }
@@ -166,9 +166,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description = "Network error during sign-in. Please check your internet connection and try again.";
       }
       else if (error.code === 'auth/internal-error' && error.message && (error.message.includes('GetProjectConfig') || error.message.includes('getProjectConfig'))) {
-        description = "Error fetching project configuration during Google Sign-In. Please ensure your API key in Firebase Studio environment settings is correct and unrestricted, and that the Identity Toolkit API is enabled in Google Cloud Console."
+        description = "Error fetching project configuration during Google Sign-In. Please ensure your API key in src/lib/firebase.ts (if hardcoded) is correct, and that the Identity Toolkit API is enabled in Google Cloud Console."
       } else if (error.message && error.message.includes('GetProjectConfig-are-blocked')) {
-         description = "Requests to fetch Firebase project configuration are blocked. This is often due to an incorrect or restricted API key. Please verify NEXT_PUBLIC_FIREBASE_API_KEY in your Firebase Studio environment settings and ensure the key is unrestricted in Google Cloud Console."
+         description = "Requests to fetch Firebase project configuration are blocked. This is often due to an incorrect or restricted API key (if applicable for other services), or issues with the Identity Toolkit API being enabled in Google Cloud Console, or billing."
       }
       toast({ variant: "destructive", title: isSignUp ? "Sign-Up Failed" : "Sign-In Failed", description });
     } finally {
@@ -252,5 +252,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
