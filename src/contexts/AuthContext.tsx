@@ -41,13 +41,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (firebaseInitializationError) {
       console.error("AuthContext: Firebase did not initialize correctly, AuthProvider will not proceed.", firebaseInitializationError);
+      // Display a toast only on the client side if Firebase init failed
+      if (typeof window !== 'undefined') {
+        toast({ 
+          variant: "destructive", 
+          title: "Firebase Critical Error", 
+          description: "Firebase services could not be initialized. Some features may not work. Please check console & environment variables.",
+          duration: 10000 // Keep it visible longer
+        });
+      }
       setIsLoading(false);
-      // Optionally, you could redirect to an error page or show a global banner
-      // For now, it just prevents further Firebase interactions that would fail.
       return;
     }
     if (!auth) {
       console.error("AuthContext: Firebase auth instance is not available. Firebase might not have initialized correctly.");
+      if (typeof window !== 'undefined') {
+        toast({ 
+            variant: "destructive", 
+            title: "Firebase Auth Error", 
+            description: "Authentication service is unavailable. Please check console.",
+            duration: 10000
+        });
+      }
       setIsLoading(false);
       return;
     }
@@ -84,6 +99,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setFirebaseUser(null); 
           if (error.code === 'permission-denied' || error.message.includes('Missing or insufficient permissions')) {
              toast({ variant: "destructive", title: "Access Error", description: "Could not load your profile. Please check permissions or contact support." });
+          } else {
+            toast({ variant: "destructive", title: "Profile Error", description: `Failed to load profile: ${error.message}` });
           }
         }
       } else {
@@ -100,6 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loginUser = async (email: string, password_for_firebase: string) => {
     if (firebaseInitializationError || !auth) {
       toast({ variant: "destructive", title: "Login Error", description: "Firebase not initialized. Cannot log in." });
+      setIsLoading(false); // Ensure loading state is reset
       return;
     }
     setIsLoading(true);
@@ -119,6 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signupUser = async (email: string, password_for_firebase: string, name_from_form: string) => {
      if (firebaseInitializationError || !auth) {
       toast({ variant: "destructive", title: "Signup Error", description: "Firebase not initialized. Cannot sign up." });
+      setIsLoading(false); // Ensure loading state is reset
       return;
     }
     setIsLoading(true);
@@ -216,5 +235,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

@@ -34,7 +34,9 @@ if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key")
   console.error("FIREBASE_INIT_ERROR:", errorMessage);
   firebaseInitializationError = errorMessage;
   if (!isServer) { 
-    throw new Error(errorMessage);
+    // Only throw client-side to prevent server crash during build or startup if env vars aren't perfectly set yet
+    // The AuthContext will check firebaseInitializationError and prevent Firebase usage.
+    // throw new Error(errorMessage); // Temporarily commented out to avoid server crash loops
   }
 }
 
@@ -43,7 +45,7 @@ if (!firebaseConfig.projectId && !firebaseInitializationError) {
   console.error("FIREBASE_INIT_ERROR:", errorMessage);
   firebaseInitializationError = errorMessage;
   if (!isServer) {
-    throw new Error(errorMessage);
+    // throw new Error(errorMessage); // Temporarily commented out
   }
 }
 
@@ -52,7 +54,7 @@ if (!firebaseConfig.authDomain && !firebaseInitializationError) {
   console.error("FIREBASE_INIT_ERROR:", errorMessage);
   firebaseInitializationError = errorMessage;
   if (!isServer) {
-    throw new Error(errorMessage);
+    // throw new Error(errorMessage); // Temporarily commented out
   }
 }
 
@@ -73,7 +75,7 @@ if (!firebaseInitializationError) {
       console.error("Using firebaseConfig during failed init:", firebaseConfig);
       firebaseInitializationError = errorMessage;
       if (!isServer) {
-        throw initError;
+        // throw initError; // Temporarily commented out
       }
     }
   } else {
@@ -88,7 +90,8 @@ if (!firebaseInitializationError) {
 
   // Initialize Auth and Firestore only if app was successfully initialized
   // and no prior critical errors occurred.
-  if (app! && !firebaseInitializationError) { // Added null assertion for app as it would be set if no error
+  // @ts-ignore app will be defined if no error previously
+  if (app && !firebaseInitializationError) { 
     try {
       auth = getAuth(app);
       console.log("Firebase Auth instance CREATED.");
@@ -98,7 +101,7 @@ if (!firebaseInitializationError) {
       console.error("App object used for getAuth:", app);
       firebaseInitializationError = errorMessage;
       if (!isServer) {
-        throw authError;
+        // throw authError; // Temporarily commented out
       }
       // @ts-ignore
       auth = undefined; 
@@ -110,14 +113,13 @@ if (!firebaseInitializationError) {
       if (db && db.app && db.app.options) {
           console.log("Firestore project ID from instance:", db.app.options.projectId);
       }
-    } catch (firestoreError: any)
-{
+    } catch (firestoreError: any) {
       const errorMessage = `CRITICAL: Firebase getFirestore FAILED: ${firestoreError.message || firestoreError}`;
       console.error("FIREBASE_INIT_ERROR:", errorMessage);
       console.error("App object used for getFirestore:", app);
       firebaseInitializationError = errorMessage;
       if (!isServer) {
-        throw firestoreError;
+        // throw firestoreError; // Temporarily commented out
       }
       // @ts-ignore
       db = undefined; 
@@ -135,4 +137,3 @@ if (!firebaseInitializationError) {
 
 
 export { app, auth, db, firebaseInitializationError };
-
