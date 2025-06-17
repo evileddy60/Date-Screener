@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({
           variant: "destructive",
           title: "Firebase Critical Error",
-          description: `Firebase services could not be initialized. Some features may not work. Error: ${firebaseInitializationError}`,
+          description: `Firebase services could not be initialized. Some features may not work. Please check Firebase configuration in your Firebase Studio IDE (https://studio.firebase.google.com/) and console logs. Error: ${firebaseInitializationError}`,
           duration: 10000
         });
       }
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({
             variant: "destructive",
             title: "Firebase Auth Error",
-            description: "Authentication service is unavailable. This might be due to a configuration issue or network block. Please check console and Firebase configuration.",
+            description: "Authentication service is unavailable. This might be due to a configuration issue in your Firebase Studio IDE (https://studio.firebase.google.com/) or network block. Please check console and Firebase configuration.",
             duration: 10000
         });
       }
@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              toast({ variant: "destructive", title: "Access Error", description: "Could not load your profile. Please check Firestore rules or contact support." });
           } else if (error.message && (error.message.includes('GetProjectConfig-are-blocked') || error.message.includes('getProjectConfig'))) {
             // This specific error might be caught here if auth object was initially available but subsequent calls fail
-            toast({ variant: "destructive", title: "Firebase Config Error", description: "Failed to get project config. Check API key & Firebase/Google Cloud project settings." });
+            toast({ variant: "destructive", title: "Firebase Config Error", description: "Failed to get project config. Check API key in your Firebase Studio IDE (https://studio.firebase.google.com/) env vars & Identity Toolkit API status in Google Cloud (https://console.cloud.google.com/)." });
           }
           else {
             toast({ variant: "destructive", title: "Profile Error", description: `Failed to load profile: ${error.message}` });
@@ -139,7 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const handleGoogleSignIn = async (isSignUp: boolean = false) => {
     if (firebaseInitializationError || !auth) {
-      toast({ variant: "destructive", title: "Sign-in Error", description: `Firebase not initialized or auth service unavailable. Cannot sign in. Error: ${firebaseInitializationError || 'Auth service missing.'}` });
+      toast({ variant: "destructive", title: "Sign-in Error", description: `Firebase not initialized or auth service unavailable. Cannot sign in. Please check environment variables in your Firebase Studio IDE (https://studio.firebase.google.com/). Error: ${firebaseInitializationError || 'Auth service missing.'}` });
       setIsLoading(false);
       return;
     }
@@ -148,9 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const result = await signInWithPopup(auth, provider);
       // Profile creation/fetching is handled by onAuthStateChanged.
-      // A simple success toast is good.
       toast({ title: isSignUp ? "Sign-Up Successful!" : "Sign-In Successful!", description: "Welcome to Date Screener!" });
-      // onAuthStateChanged will handle redirection logic
       if (typeof window !== 'undefined' && (window.location.pathname === '/auth/login' || window.location.pathname === '/auth/signup')) {
          router.push('/dashboard'); // Optimistic navigation
       }
@@ -164,15 +162,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description = "An account already exists with the same email address but different sign-in credentials. Try signing in using the original method."
       } else if (error.code === 'auth/popup-blocked') {
         description = "Sign-in popup was blocked by the browser. Please allow popups for this site and try again.";
-      } else if (error.message && error.message.includes('auth/network-request-failed')) {
+      } else if (error.code && (error.code.includes('auth/network-request-failed') || error.code.includes('network-error'))) {
         description = "Network error during sign-in. Please check your internet connection and try again.";
       } else if (error.code === 'auth/unauthorized-domain') {
-        description = "This domain is not authorized for OAuth operations. Please add it in your Firebase console (Authentication > Settings > Authorized domains).";
+        description = "This domain is not authorized for OAuth operations. Please add it in your Firebase project (Authentication > Settings > Authorized domains) on https://console.firebase.google.com/.";
       }
       else if (error.code === 'auth/internal-error' && error.message && (error.message.includes('GetProjectConfig') || error.message.includes('getProjectConfig'))) {
-        description = "Error fetching project configuration during Google Sign-In. Ensure API key is correct in Firebase Studio env vars & Identity Toolkit API is enabled in Google Cloud."
+        description = "Error fetching project configuration during Google Sign-In. Ensure API key is correct in your Firebase Studio IDE (https://studio.firebase.google.com/) env vars & Identity Toolkit API is enabled in Google Cloud (https://console.cloud.google.com/)."
       } else if (error.message && error.message.includes('GetProjectConfig-are-blocked')) {
-         description = "Requests to fetch Firebase project configuration are blocked. Check API key in Firebase Studio env vars, Identity Toolkit API status in GCP, and billing."
+         description = "Requests to fetch Firebase project configuration are blocked. Check API key in your Firebase Studio IDE (https://studio.firebase.google.com/) env vars, Identity Toolkit API status in GCP, and billing."
+      } else {
+        description = error.message || description;
       }
       toast({ variant: "destructive", title: isSignUp ? "Sign-Up Failed" : "Sign-In Failed", description });
     } finally {

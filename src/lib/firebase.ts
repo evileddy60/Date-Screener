@@ -20,21 +20,27 @@ let firebaseInitializationError: string | null = null;
 
 // Check for missing or placeholder environment variables
 const missingVars: string[] = [];
-const placeholderApiKey = "your_firebase_api_key_placeholder"; // Common placeholder to check against
-const placeholderProjectId = "your_project_id_placeholder"; // Common placeholder
+const placeholderApiKey = "your_firebase_api_key_placeholder";
+const placeholderProjectId = "your_project_id_placeholder";
 
-if (!firebaseConfigFromEnv.apiKey || firebaseConfigFromEnv.apiKey === placeholderApiKey) missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY (is missing, a placeholder, or undefined - **THIS MUST BE SET IN FIREBASE STUDIO ENVIRONMENT VARIABLE SETTINGS UI**)");
-if (!firebaseConfigFromEnv.authDomain) missingVars.push("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN (is missing or undefined - **THIS MUST BE SET IN FIREBASE STUDIO ENVIRONMENT VARIABLE SETTINGS UI**)");
-if (!firebaseConfigFromEnv.projectId || firebaseConfigFromEnv.projectId === placeholderProjectId) missingVars.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID (is missing, a placeholder, or undefined - **THIS MUST BE SET IN FIREBASE STUDIO ENVIRONMENT VARIABLE SETTINGS UI**)");
-if (!firebaseConfigFromEnv.storageBucket) missingVars.push("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET (is missing or undefined - **THIS MUST BE SET IN FIREBASE STUDIO ENVIRONMENT VARIABLE SETTINGS UI**)");
-if (!firebaseConfigFromEnv.messagingSenderId) missingVars.push("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID (is missing or undefined - **THIS MUST BE SET IN FIREBASE STUDIO ENVIRONMENT VARIABLE SETTINGS UI**)");
-if (!firebaseConfigFromEnv.appId) missingVars.push("NEXT_PUBLIC_FIREBASE_APP_ID (is missing or undefined - **THIS MUST BE SET IN FIREBASE STUDIO ENVIRONMENT VARIABLE SETTINGS UI**)");
+// Log the actual values being read from process.env on the server-side during initialization
+if (typeof window === 'undefined') {
+  console.log("SERVER_SIDE_FIREBASE_INIT: Attempting to use NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+  console.log("SERVER_SIDE_FIREBASE_INIT: Attempting to use NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+}
+
+if (!firebaseConfigFromEnv.apiKey || firebaseConfigFromEnv.apiKey === placeholderApiKey) missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY (is missing or a placeholder - **THIS MUST BE SET IN YOUR FIREBASE STUDIO IDE (https://studio.firebase.google.com/) ENVIRONMENT VARIABLE SETTINGS UI**)");
+if (!firebaseConfigFromEnv.authDomain) missingVars.push("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN (is missing or undefined - **THIS MUST BE SET IN YOUR FIREBASE STUDIO IDE (https://studio.firebase.google.com/) ENVIRONMENT VARIABLE SETTINGS UI**)");
+if (!firebaseConfigFromEnv.projectId || firebaseConfigFromEnv.projectId === placeholderProjectId) missingVars.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID (is missing or a placeholder - **THIS MUST BE SET IN YOUR FIREBASE STUDIO IDE (https://studio.firebase.google.com/) ENVIRONMENT VARIABLE SETTINGS UI**)");
+if (!firebaseConfigFromEnv.storageBucket) missingVars.push("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET (is missing or undefined - **THIS MUST BE SET IN YOUR FIREBASE STUDIO IDE (https://studio.firebase.google.com/) ENVIRONMENT VARIABLE SETTINGS UI**)");
+if (!firebaseConfigFromEnv.messagingSenderId) missingVars.push("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID (is missing or undefined - **THIS MUST BE SET IN YOUR FIREBASE STUDIO IDE (https://studio.firebase.google.com/) ENVIRONMENT VARIABLE SETTINGS UI**)");
+if (!firebaseConfigFromEnv.appId) missingVars.push("NEXT_PUBLIC_FIREBASE_APP_ID (is missing or undefined - **THIS MUST BE SET IN YOUR FIREBASE STUDIO IDE (https://studio.firebase.google.com/) ENVIRONMENT VARIABLE SETTINGS UI**)");
 
 if (missingVars.length > 0) {
-  const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required environment variables are missing, placeholders, or undefined. Firebase cannot initialize. 
-    Problematic Variables: ${missingVars.join('; ')}. 
-    PLEASE VERIFY AND SET THEM CORRECTLY IN YOUR PROJECT'S ENVIRONMENT VARIABLE SETTINGS IN THE FIREBASE STUDIO UI. 
-    (API Key value code is trying to use: '${firebaseConfigFromEnv.apiKey}', Project ID value code is trying to use: '${firebaseConfigFromEnv.projectId}')`;
+  const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required environment variables are missing, placeholders, or undefined in your Firebase Studio project settings (https://studio.firebase.google.com/). Firebase cannot initialize.
+    Problematic Variables: ${missingVars.join('; ')}.
+    PLEASE VERIFY AND SET THEM CORRECTLY IN YOUR PROJECT'S ENVIRONMENT VARIABLE SETTINGS IN THE FIREBASE STUDIO UI (https://studio.firebase.google.com/).
+    (Value for NEXT_PUBLIC_FIREBASE_API_KEY read by code: '${firebaseConfigFromEnv.apiKey}', Value for NEXT_PUBLIC_FIREBASE_PROJECT_ID read by code: '${firebaseConfigFromEnv.projectId}')`;
   
   if (!firebaseInitializationError) {
     firebaseInitializationError = errorMessage;
@@ -59,18 +65,15 @@ if (!firebaseInitializationError) {
     }
     auth = getAuth(app);
     db = getFirestore(app);
-    if (typeof window === 'undefined') { // Server-side log
-        console.log("SERVER_SIDE_FIREBASE_INIT: Attempting to use NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY, "Project ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
-    }
   } catch (error: any) {
     let detailedErrorMessage = `CRITICAL: Firebase initialization of core services FAILED.
     Error: ${error.message || error}
-    Config values from environment variables:
+    Config values attempted from environment variables:
       API Key: '${firebaseConfigFromEnv.apiKey}' (from NEXT_PUBLIC_FIREBASE_API_KEY)
       Project ID: '${firebaseConfigFromEnv.projectId}' (from NEXT_PUBLIC_FIREBASE_PROJECT_ID)
     Please verify:
-    1. All NEXT_PUBLIC_FIREBASE_... environment variables are correctly set in the Firebase Studio IDE.
-    2. 'Identity Toolkit API' is enabled in Google Cloud Console for project '${firebaseConfigFromEnv.projectId}'.
+    1. All NEXT_PUBLIC_FIREBASE_... environment variables are correctly set in your Firebase Studio IDE (https://studio.firebase.google.com/).
+    2. 'Identity Toolkit API' is enabled in Google Cloud Console (https://console.cloud.google.com/) for project '${firebaseConfigFromEnv.projectId}'.
     3. Your Google Cloud project billing is active.
     4. Network connectivity to Firebase services.`;
 
@@ -78,18 +81,20 @@ if (!firebaseInitializationError) {
     if (!firebaseInitializationError) {
         firebaseInitializationError = detailedErrorMessage;
     }
+    // Ensure services are undefined on critical failure
     app = undefined;
     auth = undefined;
     db = undefined;
   }
 } else {
+  // If firebaseInitializationError was already set due to missing env vars, ensure services are undefined
   app = undefined;
   auth = undefined;
   db = undefined;
 }
 
 if (firebaseInitializationError && auth === undefined && db === undefined) {
-  console.error("Firebase Initialization resulted in an error, Auth and DB services are unavailable. Review previous logs for details.", firebaseInitializationError);
+  console.error("Firebase Initialization resulted in an error, Auth and DB services are unavailable. Review previous logs for details. Error:", firebaseInitializationError);
 }
 
 export { app, auth, db, firebaseInitializationError };
