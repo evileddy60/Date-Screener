@@ -30,6 +30,8 @@ const ProfileCardPromptSchema = z.object({
     gender: z.string().optional(),
     location: z.string().optional(),
   }).optional(),
+  // Added for context, though AI might not use it directly unless prompted
+  // createdByMatcherId: z.string(), 
 });
 type ProfileCardPrompt = z.infer<typeof ProfileCardPromptSchema>;
 
@@ -43,11 +45,11 @@ export type FindPotentialMatchesInput = z.infer<typeof FindPotentialMatchesInput
 const AISuggestedMatchSchema = z.object({
   matchedProfileCardId: z.string().describe("The ID of the candidate Profile Card that is a good match."),
   compatibilityScore: z.number().min(0).max(100).describe("A score from 0 to 100 indicating compatibility."),
-  compatibilityReason: z.string().describe("A brief (1-2 sentences) explanation for why these two profiles are a good match."),
+  compatibilityReason: z.string().describe("A brief (2-3 sentences) explanation for why these two profiles are a good match."),
 });
 
 const AIOutputSchema = z.object({
-  suggestions: z.array(AISuggestedMatchSchema).describe("An array of suggested matches. Should be the top 3-5 matches, or empty if no good matches found."),
+  suggestions: z.array(AISuggestedMatchSchema).describe("An array of suggested matches, ranked from most to least compatible. Should be the top 3-5 matches, or empty if no good matches found."),
 });
 
 const FindPotentialMatchesOutputSchema = z.object({
@@ -67,9 +69,10 @@ const prompt = ai.definePrompt({
     candidateCards: z.array(ProfileCardPromptSchema),
   })},
   output: { schema: AIOutputSchema },
-  prompt: `You are an expert matchmaking AI. Your task is to find the best potential matches for a 'targetProfileCard' from a list of 'candidateProfileCards'.
+  prompt: `You are a matchmaking assistant. Analyze the following profile cards to determine the best matches between friends. Consider matching preferences (age range, gender, location), shared interests, relationship goals, and personality descriptions. For each potential match, assign a compatibility score out of 100 and explain your reasoning in 2-3 sentences. Present the matches as a ranked list from most to least compatible.
 
   Target Profile Card:
+  ID: {{{targetCard.id}}}
   Name: {{{targetCard.friendName}}}
   Bio: {{{targetCard.bio}}}
   Interests: {{#each targetCard.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
@@ -92,16 +95,10 @@ const prompt = ai.definePrompt({
       Location: {{{this.preferences.location}}}
   {{/each}}
 
-  Analyze the target card and compare it against each candidate card. Consider shared interests, complementary personalities (inferred from bios), alignment in 'seeking' preferences, age range compatibility, gender preferences, and location proximity.
-
-  Identify the top 3-5 best potential matches from the candidate list. For each identified match:
-  1. Provide the 'matchedProfileCardId' (the ID of the candidate card).
-  2. Assign a 'compatibilityScore' between 0 and 100 (100 being a perfect match).
-  3. Write a concise 'compatibilityReason' (1-2 sentences) explaining the key factors that make them a good match.
-
-  If no suitable matches are found, return an empty array for 'suggestions'.
+  Identify the top 3-5 best potential matches from the candidate list.
+  Ensure the response is a JSON object matching the defined output schema.
   Do not suggest a card if it is the same as the target card.
-  Return your response as a JSON object matching the defined output schema.
+  If no suitable matches are found, return an empty array for 'suggestions'.
   `,
 });
 
@@ -112,24 +109,21 @@ const findPotentialMatchesFlow = ai.defineFlow(
     outputSchema: FindPotentialMatchesOutputSchema,
   },
   async (input) => {
-    const allProfileCardsFromDb = await getAllProfileCards(); // Fetch from Firestore
+    const allProfileCardsFromDb = await getAllProfileCards(); 
 
     const targetCardFull = allProfileCardsFromDb.find(pc => pc.id === input.targetProfileCardId);
     if (!targetCardFull) {
       throw new Error(`Target profile card with ID ${input.targetProfileCardId} not found.`);
     }
 
-    // Filter out the target card and cards created by the same matcher for now
-    // A more advanced version might allow matching cards from the same matcher if they are for different friends.
     const candidateCardsFull = allProfileCardsFromDb.filter(
       pc => pc.id !== input.targetProfileCardId && pc.createdByMatcherId !== targetCardFull.createdByMatcherId
     );
 
     if (candidateCardsFull.length === 0) {
-      return { createdPotentialMatchIds: [] }; // No candidates to match against
+      return { createdPotentialMatchIds: [] }; 
     }
 
-    // Transform full cards to simplified prompt schema
     const targetCardPromptData: ProfileCardPrompt = {
         id: targetCardFull.id,
         friendName: targetCardFull.friendName,
@@ -144,7 +138,6 @@ const findPotentialMatchesFlow = ai.defineFlow(
         interests: card.interests,
         preferences: card.preferences,
     }));
-
 
     const {output} = await prompt({
         targetCard: targetCardPromptData,
@@ -165,13 +158,16 @@ const findPotentialMatchesFlow = ai.defineFlow(
         continue;
       }
 
-      // Check if this potential match already exists in Firestore
       const existingMatch = await findExistingPotentialMatch(targetCardFull.id, matchedCardFull.id);
-
       if (existingMatch) {
-        // If a match record exists, we don't create a new one.
-        // We could potentially update it if the AI has new insights, but for now, skip.
-        continue;
+        // If a match record exists where both friends haven't rejected, we don't create a new one.
+        // Or if statusMatcherA/B are still pending on existing.
+        // This logic can be refined: e.g., only skip if the existing match is still 'pending' for both matchers
+        // or if it hasn't been definitively rejected by friends.
+        // For now, simple "if exists, skip" to avoid duplicate pending matches.
+        if (existingMatch.statusFriendA !== 'rejected' && existingMatch.statusFriendB !== 'rejected') {
+            continue;
+        }
       }
 
       const newPotentialMatchData: Omit<PotentialMatch, 'id' | 'createdAt'> = {
@@ -183,10 +179,13 @@ const findPotentialMatchesFlow = ai.defineFlow(
         compatibilityReason: suggestion.compatibilityReason,
         statusMatcherA: 'pending',
         statusMatcherB: 'pending',
+        statusFriendA: 'pending',
+        statusFriendB: 'pending',
+        friendEmailSent: false, // Initialize new field
         // createdAt will be set by addPotentialMatch
       };
 
-      const createdMatch = await addPotentialMatch(newPotentialMatchData); // Save to Firestore
+      const createdMatch = await addPotentialMatch(newPotentialMatchData); 
       createdPotentialMatchIds.push(createdMatch.id);
     }
 

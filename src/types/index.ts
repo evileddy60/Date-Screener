@@ -58,6 +58,7 @@ export interface PotentialMatch { // Represents a potential match between two Pr
   statusMatcherB: 'pending' | 'accepted' | 'rejected';
   statusFriendA?: 'pending' | 'accepted' | 'rejected'; // If Matchers accept, then friend is notified
   statusFriendB?: 'pending' | 'accepted' | 'rejected';
+  friendEmailSent?: boolean; // Tracks if the introduction email has been sent (or simulated)
   createdAt: string; // ISO date string
   updatedAt?: string;
 }

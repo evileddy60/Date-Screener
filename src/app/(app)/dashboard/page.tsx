@@ -5,19 +5,46 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-// Removed: import Image from 'next/image';
-import { UserCircle, BookUser, ShieldCheck, ArrowRight, Users } from 'lucide-react'; 
+import { UserCircle, BookUser, ShieldCheck, ArrowRight, Users, Bell } from 'lucide-react'; 
 import { USER_ROLES } from '@/lib/constants';
+import { useEffect, useState } from 'react';
+import type { PotentialMatch } from '@/types';
+import { getPotentialMatchesByMatcher } from '@/lib/firestoreService';
+import { Badge } from '@/components/ui/badge';
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
+  const [pendingReviewCount, setPendingReviewCount] = useState(0);
+  const [isLoadingPendingCount, setIsLoadingPendingCount] = useState(true);
+
+  useEffect(() => {
+    async function fetchPendingMatches() {
+      if (currentUser && currentUser.role === USER_ROLES.RECOMMENDER) {
+        setIsLoadingPendingCount(true);
+        try {
+          const matches = await getPotentialMatchesByMatcher(currentUser.id);
+          const pendingCount = matches.filter(match => {
+            const myDecision = match.matcherAId === currentUser.id ? match.statusMatcherA : match.statusMatcherB;
+            return myDecision === 'pending';
+          }).length;
+          setPendingReviewCount(pendingCount);
+        } catch (error) {
+          console.error("Error fetching pending matches count:", error);
+          setPendingReviewCount(0);
+        } finally {
+          setIsLoadingPendingCount(false);
+        }
+      }
+    }
+    fetchPendingMatches();
+  }, [currentUser]);
 
   if (!currentUser) {
     return <p>Loading user data...</p>;
   }
 
-  const QuickLink = ({ href, icon: Icon, title, description }: { href: string, icon: React.ElementType, title: string, description: string }) => (
-    <Link href={href} className="block group">
+  const QuickLink = ({ href, icon: Icon, title, description, count }: { href: string, icon: React.ElementType, title: string, description: string, count?: number }) => (
+    <Link href={href} className="block group relative">
       <Card className="hover:shadow-lg hover:border-primary/50 transition-all duration-300 h-full flex flex-col">
         <CardHeader className="flex flex-row items-center gap-4 pb-2">
           <div className="p-3 bg-primary/10 rounded-lg">
@@ -34,6 +61,11 @@ export default function DashboardPage() {
           </Button>
         </CardContent>
       </Card>
+      {count !== undefined && count > 0 && (
+          <Badge className="absolute top-3 right-3 bg-destructive text-destructive-foreground animate-pulse">
+            <Bell className="mr-1 h-3 w-3" /> {count}
+          </Badge>
+        )}
     </Link>
   );
   
@@ -69,7 +101,13 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <QuickLink href="/profile" icon={UserCircle} title="My Matchmaker Profile" description="View and update your personal information." />
           <QuickLink href="/profile-cards" icon={BookUser} title="Manage Profile Cards" description="Create and manage profiles for your single friends. Find matches from here." />
-          <QuickLink href="/potential-matches" icon={Users} title="Review Matches" description="Review and approve/reject AI-suggested matches between profile cards." />
+          <QuickLink 
+            href="/potential-matches" 
+            icon={Users} 
+            title="Review Matches" 
+            description="Review and approve/reject AI-suggested matches between profile cards." 
+            count={isLoadingPendingCount ? undefined : pendingReviewCount}
+          />
           <QuickLink href="/privacy" icon={ShieldCheck} title="Privacy Settings" description="Manage your account settings and preferences." />
         </div>
       </section>
