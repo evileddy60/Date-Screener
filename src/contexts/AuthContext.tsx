@@ -10,11 +10,9 @@ import { auth, firebaseInitializationError, db } from '@/lib/firebase';
 import { 
   User as FirebaseUser, 
   onAuthStateChanged, 
-  // createUserWithEmailAndPassword, // No longer needed
-  // signInWithEmailAndPassword, // No longer needed
   signOut,
-  GoogleAuthProvider, // Added
-  signInWithPopup // Added
+  GoogleAuthProvider, 
+  signInWithPopup
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 import { generateUniqueAvatarSvgDataUri } from '@/lib/utils'; 
@@ -92,16 +90,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'New Matcher');
             const newProfile: UserProfile = {
               id: user.uid,
-              email: user.email || '', // Email from Google
-              name: defaultName, // Name from Google
+              email: user.email || '', 
+              name: defaultName, 
               role: USER_ROLES.RECOMMENDER,
               bio: 'Welcome! Please complete your matchmaker profile.',
-              photoUrl: user.photoURL || generateUniqueAvatarSvgDataUri(user.uid), // Photo from Google or fallback
+              photoUrl: user.photoURL || generateUniqueAvatarSvgDataUri(user.uid), 
               privacySettings: defaultPrivacySettings,
             };
             await setUserProfile(newProfile); 
             setCurrentUser(newProfile);
-            // Redirect to profile page for new users to complete their info
+            
             if (router.pathname !== '/profile') {
                 router.push('/profile');
             }
@@ -119,7 +117,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setFirebaseUser(null);
         setCurrentUser(null);
-        localStorage.removeItem('activeFirebaseUserId'); 
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('activeFirebaseUserId');
+        }
       }
       setIsLoading(false);
     });
@@ -127,7 +127,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, [router, toast]);
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (isSignUp: boolean = false) => {
     if (firebaseInitializationError || !auth) {
       toast({ variant: "destructive", title: "Sign-in Error", description: "Firebase not initialized. Cannot sign in." });
       setIsLoading(false);
@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         router.push('/dashboard');
       }
       // If it's a new user, onAuthStateChanged's logic will redirect to /profile
-      toast({ title: "Sign-In Successful", description: "Welcome!" });
+      toast({ title: isSignUp ? "Sign-Up Successful" : "Sign-In Successful", description: "Welcome!" });
     } catch (error: any) {
       console.error("Google sign-in error:", error);
       let description = "Could not sign in with Google. Please try again.";
@@ -153,20 +153,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description = "Sign-in cancelled. Please try again if you wish to proceed.";
       } else if (error.code === 'auth/account-exists-with-different-credential') {
         description = "An account already exists with the same email address but different sign-in credentials. Try signing in using the original method."
+      } else if (error.code === 'auth/popup-blocked') {
+        description = "Sign-in popup was blocked by the browser. Please allow popups for this site and try again.";
       }
-      toast({ variant: "destructive", title: "Sign-In Failed", description });
+      toast({ variant: "destructive", title: isSignUp ? "Sign-Up Failed" : "Sign-In Failed", description });
     } finally {
       setIsLoading(false);
     }
   };
 
   const loginWithGoogle = async () => {
-    await handleGoogleSignIn();
+    await handleGoogleSignIn(false);
   };
 
   const signupWithGoogle = async () => {
-    // Signup and Login with Google are effectively the same flow
-    await handleGoogleSignIn();
+    await handleGoogleSignIn(true);
   };
 
   const logoutUser = async () => {
@@ -174,15 +175,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Logout Error", description: "Firebase not initialized. Cannot log out." });
       setFirebaseUser(null);
       setCurrentUser(null);
-      localStorage.removeItem('activeFirebaseUserId');
-      router.push('/auth/login'); // Redirect to login after logout
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('activeFirebaseUserId');
+      }
+      router.push('/auth/login'); 
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
     try {
       await signOut(auth);
-      router.push('/auth/login'); // Redirect to login after logout
+      router.push('/auth/login'); 
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
       console.error("Firebase logout error:", error);
