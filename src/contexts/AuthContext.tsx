@@ -161,7 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else if (error.message && error.message.includes('auth/network-request-failed')) {
         description = "Network error during sign-in. Please check your internet connection and try again.";
       }
-      else if (error.code === 'auth/internal-error' && error.message.includes('GetProjectConfig')) {
+      else if (error.code === 'auth/internal-error' && error.message && error.message.includes('GetProjectConfig')) {
         description = "Error fetching project configuration during Google Sign-In. Please ensure your API key is correct and unrestricted, and that the Identity Toolkit API is enabled. Check environment variables."
       }
       toast({ variant: "destructive", title: isSignUp ? "Sign-Up Failed" : "Sign-In Failed", description });
