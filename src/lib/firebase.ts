@@ -20,11 +20,9 @@ let firebaseInitializationError: string | null = null;
 const isServer = typeof window === 'undefined';
 
 if (isServer) {
-  // This log helps confirm what API key the server-side environment sees.
   console.log("SERVER_SIDE_FIREBASE_INIT: Using NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
 }
 
-// Check for placeholder or missing critical environment variables
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key" || !firebaseConfig.projectId) {
   let missingVars = [];
   if (!firebaseConfig.apiKey) {
@@ -73,13 +71,11 @@ if (!firebaseInitializationError) {
     if (!firebaseInitializationError) {
         firebaseInitializationError = detailedErrorMessage;
     }
-    // Ensure services are undefined if initialization fails
     app = undefined;
     auth = undefined;
     db = undefined;
   }
 } else {
-  // If firebaseInitializationError was set by the config check, ensure services are undefined
   app = undefined;
   auth = undefined;
   db = undefined;
@@ -91,3 +87,5 @@ if (firebaseInitializationError && auth === undefined && db === undefined) {
 
 
 export { app, auth, db, firebaseInitializationError };
+
+    
