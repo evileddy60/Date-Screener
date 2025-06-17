@@ -107,6 +107,14 @@ export async function getAllProfileCards(): Promise<ProfileCard[]> {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProfileCard));
 }
 
+export async function deleteProfileCard(cardId: string): Promise<void> {
+  const cardRef = doc(db, PROFILE_CARDS_COLLECTION, cardId);
+  // TODO: Consider deleting related PotentialMatch documents if needed.
+  // For now, just deleting the card.
+  await deleteDoc(cardRef);
+}
+
+
 // --- PotentialMatch Functions ---
 
 export async function addPotentialMatch(
@@ -197,3 +205,4 @@ export async function clearUserProfilesCollection(): Promise<void> {
   await batch.commit();
   console.log("UserProfiles collection cleared.");
 }
+

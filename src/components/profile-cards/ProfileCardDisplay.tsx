@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Info, Edit, Search, CalendarDays, AtSign, Heart, MapPin, UsersIcon } from 'lucide-react'; 
+import { User, Info, Edit, Search, CalendarDays, AtSign, Heart, MapPin, UsersIcon, Trash2 } from 'lucide-react'; 
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { mockUserProfiles } from '@/lib/mockData'; 
@@ -16,14 +16,19 @@ interface ProfileCardDisplayProps {
   profileCard: ProfileCard;
   onEdit: () => void;
   onFindMatch: (profileCardId: string) => void;
+  onDeleteRequest: (profileCardId: string) => void;
 }
 
-export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch }: ProfileCardDisplayProps) {
+export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteRequest }: ProfileCardDisplayProps) {
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase();
   const router = useRouter();
 
   const handleFindMatchClick = () => {
     onFindMatch(profileCard.id);
+  };
+  
+  const handleDeleteClick = () => {
+    onDeleteRequest(profileCard.id);
   };
 
   const matcherProfile = mockUserProfiles.find(user => user.id === profileCard.createdByMatcherId);
@@ -71,12 +76,12 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch }: Profile
             {profileCard.preferences.ageRange && (
               <p className="flex items-center gap-1"><CalendarDays className="w-3 h-3 text-primary/70"/> Age: {profileCard.preferences.ageRange}</p>
             )}
-            {profileCard.preferences.seeking && (
+            {profileCard.preferences.seeking && profileCard.preferences.seeking.length > 0 && (
               <p className="flex items-start gap-1">
-                <Heart className="w-3 h-3 text-primary/70 mt-0.5" /> Seeking: {
-                  Array.isArray(profileCard.preferences.seeking) 
-                    ? profileCard.preferences.seeking.join(', ') 
-                    : profileCard.preferences.seeking 
+                <Heart className="w-3 h-3 text-primary/70 mt-0.5" /> Seeking: { 
+                    Array.isArray(profileCard.preferences.seeking) 
+                        ? profileCard.preferences.seeking.join(', ') 
+                        : profileCard.preferences.seeking 
                 }
               </p>
             )}
@@ -94,9 +99,14 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch }: Profile
             <p className="font-body text-xs text-muted-foreground flex items-center gap-1">
             <CalendarDays className="w-3 h-3" /> Created {formatDistanceToNow(new Date(profileCard.createdAt), { addSuffix: true })}
             </p>
-            <Button onClick={onEdit} size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
-                <Edit className="mr-2 h-4 w-4" /> Edit
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={onEdit} size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+              </Button>
+              <Button onClick={handleDeleteClick} size="sm" variant="destructive" className="bg-destructive/90 hover:bg-destructive text-destructive-foreground">
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </Button>
+            </div>
         </div>
         <Button onClick={handleFindMatchClick} size="sm" variant="default" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow hover:shadow-md transition-all">
           <Search className="mr-2 h-4 w-4" /> Find Match for {profileCard.friendName}
