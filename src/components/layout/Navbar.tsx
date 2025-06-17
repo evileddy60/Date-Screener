@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Home, UserCircle, Users, LogOut, LogIn, UserPlus, BookUser, Sparkles } from 'lucide-react'; // Removed ShieldCheck
+import { Home, UserCircle, Users, LogOut, LogIn, UserPlus, BookUser, Sparkles } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { USER_ROLES } from '@/lib/constants';
@@ -41,12 +41,11 @@ export function Navbar() {
                  <Link href="/potential-matches" className={navLinkClass("/potential-matches")}>
                   <Users className="h-4 w-4" /> Review Matches
                 </Link>
-                {/* Privacy link removed, integrated into Profile */}
                 <Link href="/profile" className={navLinkClass("/profile")}>
                   <UserCircle className="h-4 w-4" /> My Profile & Settings
                 </Link>
                 <Button variant="ghost" size="sm" onClick={logoutUser} className="text-foreground/80 hover:text-primary">
-                  <LogOut className="mr-2 h-4 w-4" /> Logout
+                  <LogOut className="mr-2 h-4 w-4" /> Logout: {currentUser.name}
                 </Button>
               </>
             ) : (
