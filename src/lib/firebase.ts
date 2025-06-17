@@ -18,10 +18,11 @@ let auth: Auth | undefined;
 let db: Firestore | undefined;
 let firebaseInitializationError: string | null = null;
 
-// Check for missing or placeholder environment variables
-const missingVars: string[] = [];
+// Placeholder values to check against
 const placeholderApiKey = "your_firebase_api_key_placeholder";
 const placeholderProjectId = "your_project_id_placeholder";
+
+const missingVars: string[] = [];
 
 // Log the actual values being read from process.env on the server-side during initialization
 if (typeof window === 'undefined') {
@@ -37,10 +38,10 @@ if (!firebaseConfigFromEnv.messagingSenderId) missingVars.push("NEXT_PUBLIC_FIRE
 if (!firebaseConfigFromEnv.appId) missingVars.push("NEXT_PUBLIC_FIREBASE_APP_ID (is missing or undefined - **THIS MUST BE SET IN YOUR FIREBASE STUDIO IDE (https://studio.firebase.google.com/) ENVIRONMENT VARIABLE SETTINGS UI**)");
 
 if (missingVars.length > 0) {
-  const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required environment variables are missing, placeholders, or undefined in your Firebase Studio project settings (https://studio.firebase.google.com/). Firebase cannot initialize.
-    Problematic Variables: ${missingVars.join('; ')}.
-    PLEASE VERIFY AND SET THEM CORRECTLY IN YOUR PROJECT'S ENVIRONMENT VARIABLE SETTINGS IN THE FIREBASE STUDIO UI (https://studio.firebase.google.com/).
-    (Value for NEXT_PUBLIC_FIREBASE_API_KEY read by code: '${firebaseConfigFromEnv.apiKey}', Value for NEXT_PUBLIC_FIREBASE_PROJECT_ID read by code: '${firebaseConfigFromEnv.projectId}')`;
+  const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required environment variables are missing, placeholders, or undefined. Firebase cannot initialize. 
+    Problematic Variables: ${missingVars.join('; ')}. 
+    PLEASE VERIFY AND SET THEM CORRECTLY IN YOUR PROJECT'S ENVIRONMENT VARIABLE SETTINGS IN THE FIREBASE STUDIO IDE (https://studio.firebase.google.com/). 
+    (API Key value code is trying to use: '${firebaseConfigFromEnv.apiKey}', Project ID value code is trying to use: '${firebaseConfigFromEnv.projectId}')`;
   
   if (!firebaseInitializationError) {
     firebaseInitializationError = errorMessage;
