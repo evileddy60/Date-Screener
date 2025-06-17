@@ -37,11 +37,10 @@ export interface ProfileCard { // Profile of a single friend, created by a Match
   interests: string[];
   photoUrl?: string;
   preferences: {
-    ageRange?: string;
-    seeking?: string;
-    // Add other relevant preferences for matching
-    gender?: string; 
-    location?: string;
+    ageRange?: string; // e.g., "25-35"
+    seeking?: string[]; // Changed from string to string[]
+    gender?: string; // e.g., "Men", "Women", "Other"
+    location?: string; // e.g., "50 km"
   };
   createdAt: string; // ISO date string
 }
@@ -72,3 +71,4 @@ export interface MatchFeedback {
   comments?: string;
   createdAt: string; // ISO date string
 }
+
