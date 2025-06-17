@@ -20,6 +20,7 @@ let firebaseInitializationError: string | null = null;
 const isServer = typeof window === 'undefined';
 
 if (isServer) {
+  // This log helps confirm what API key the server-side environment sees.
   console.log("SERVER_SIDE_FIREBASE_INIT: Using NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
 }
 
@@ -27,7 +28,10 @@ if (isServer) {
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key" || !firebaseConfig.projectId) {
   let missingVars = [];
   if (!firebaseConfig.apiKey) missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY (is missing or undefined)");
-  if (firebaseConfig.apiKey === "your_firebase_api_key") missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY (is still the placeholder 'your_firebase_api_key' - **THIS MUST BE FIXED IN FIREBASE STUDIO ENVIRONMENT VARIABLE SETTINGS UI**)");
+  // Ensure the check for placeholder string is specific and correct
+  if (firebaseConfig.apiKey === "your_firebase_api_key") {
+    missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY (is still the placeholder 'your_firebase_api_key' - **THIS MUST BE FIXED IN FIREBASE STUDIO ENVIRONMENT VARIABLE SETTINGS UI**)");
+  }
   if (!firebaseConfig.projectId) missingVars.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID (is missing or undefined)");
 
   const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required environment variables are missing, placeholders, or undefined in your Firebase Studio project settings: ${missingVars.join(', ')}. Firebase cannot initialize. Please set them correctly in your project's environment variable settings in the Firebase Studio UI. API Key Used by code: '${firebaseConfig.apiKey}', Project ID Used by code: '${firebaseConfig.projectId}'`;
