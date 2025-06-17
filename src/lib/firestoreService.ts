@@ -11,12 +11,32 @@ import {
   where,
   Timestamp,
   deleteDoc,
-  writeBatch
+  writeBatch,
+  setDoc // Added for setUserProfile
 } from 'firebase/firestore';
-import type { ProfileCard, PotentialMatch } from '@/types';
+import type { ProfileCard, PotentialMatch, UserProfile } from '@/types';
 
 const PROFILE_CARDS_COLLECTION = 'profileCards';
 const POTENTIAL_MATCHES_COLLECTION = 'potentialMatches';
+const USER_PROFILES_COLLECTION = 'userProfiles'; // New collection
+
+// --- UserProfile Functions ---
+
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  const userProfileRef = doc(db, USER_PROFILES_COLLECTION, userId);
+  const userProfileSnap = await getDoc(userProfileRef);
+  if (userProfileSnap.exists()) {
+    return { id: userProfileSnap.id, ...userProfileSnap.data() } as UserProfile;
+  }
+  return null;
+}
+
+export async function setUserProfile(userProfile: UserProfile): Promise<void> {
+  const userProfileRef = doc(db, USER_PROFILES_COLLECTION, userProfile.id);
+  // Using setDoc with merge: true will create if not exists, or update if exists.
+  await setDoc(userProfileRef, userProfile, { merge: true });
+}
+
 
 // --- ProfileCard Functions ---
 
@@ -148,4 +168,12 @@ export async function clearPotentialMatchesCollection(): Promise<void> {
   querySnapshot.docs.forEach(doc => batch.delete(doc.ref));
   await batch.commit();
   console.log("PotentialMatches collection cleared.");
+}
+
+export async function clearUserProfilesCollection(): Promise<void> {
+  const querySnapshot = await getDocs(collection(db, USER_PROFILES_COLLECTION));
+  const batch = writeBatch(db);
+  querySnapshot.docs.forEach(doc => batch.delete(doc.ref));
+  await batch.commit();
+  console.log("UserProfiles collection cleared.");
 }
