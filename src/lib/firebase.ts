@@ -18,59 +18,64 @@ let auth: Auth | undefined;
 let db: Firestore | undefined;
 let firebaseInitializationError: string | null = null;
 
-// Placeholder values to check against for critical Firebase config
-const placeholderApiKey = "your_firebase_api_key_placeholder"; // General placeholder
-const specificIncorrectApiKey = "AIzaSyCZ0LHVRW1lUU_DBwkIcjhNvyq6x9DmC5I"; // The one we saw earlier
-const placeholderProjectId = "your_project_id_placeholder";
-
 const missingVars: string[] = [];
 
-// Log the actual values being read from process.env on the server-side during initialization
 if (typeof window === 'undefined') {
+  // This log will appear in the server-side console during build/startup
   console.log("SERVER_SIDE_FIREBASE_INIT: Attempting to use NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
   console.log("SERVER_SIDE_FIREBASE_INIT: Attempting to use NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
 }
 
+
+// Check for missing or placeholder environment variables
+const placeholderApiKey = "your_firebase_api_key_placeholder";
+const specificIncorrectApiKey = "AIzaSyCZ0LHVRW1lUU_DBwkIcjhNvyq6x9DmC5I"; // A previously identified incorrect key
+const placeholderProjectId = "your_project_id_placeholder";
+
 if (!firebaseConfigFromEnv.apiKey || firebaseConfigFromEnv.apiKey === placeholderApiKey || firebaseConfigFromEnv.apiKey === specificIncorrectApiKey) {
-  missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY (is missing, a placeholder, or a known incorrect value. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings.)");
+  missingVars.push("NEXT_PUBLIC_FIREBASE_API_KEY (is missing, a placeholder, or a known incorrect value. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings UI.)");
 }
-if (!firebaseConfigFromEnv.authDomain) missingVars.push("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN (is missing or undefined. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings.)");
+if (!firebaseConfigFromEnv.authDomain) missingVars.push("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN (is missing or undefined. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings UI.)");
 if (!firebaseConfigFromEnv.projectId || firebaseConfigFromEnv.projectId === placeholderProjectId) {
-  missingVars.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID (is missing or a placeholder. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings.)");
+  missingVars.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID (is missing or a placeholder. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings UI.)");
 }
-if (!firebaseConfigFromEnv.storageBucket) missingVars.push("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET (is missing or undefined. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings.)");
-if (!firebaseConfigFromEnv.messagingSenderId) missingVars.push("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID (is missing or undefined. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings.)");
-if (!firebaseConfigFromEnv.appId) missingVars.push("NEXT_PUBLIC_FIREBASE_APP_ID (is missing or undefined. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings.)");
+if (!firebaseConfigFromEnv.storageBucket) missingVars.push("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET (is missing or undefined. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings UI.)");
+if (!firebaseConfigFromEnv.messagingSenderId) missingVars.push("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID (is missing or undefined. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings UI.)");
+if (!firebaseConfigFromEnv.appId) missingVars.push("NEXT_PUBLIC_FIREBASE_APP_ID (is missing or undefined. Ensure it's correctly set in your .env file or Firebase Studio environment variable settings UI.)");
+
 
 if (missingVars.length > 0) {
-  const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required Firebase environment variables are missing, placeholders, or incorrect. Firebase cannot initialize. 
-    Problematic Variables: ${missingVars.join('; ')}. 
-    PLEASE VERIFY AND SET THEM CORRECTLY in your .env file at the project root or in your Firebase Studio project's environment variable settings UI (if available).
+  const errorMessage = `CRITICAL FIREBASE ENV VAR ERROR: The following required Firebase environment variables are missing, placeholders, or incorrect. Firebase cannot initialize.
+    Problematic Variables: ${missingVars.join('; ')}.
+    PLEASE VERIFY AND SET THEM CORRECTLY in your .env file at the project root or in your Firebase Studio project's environment variable settings UI.
     (API Key value code is trying to use: '${firebaseConfigFromEnv.apiKey}', Project ID value code is trying to use: '${firebaseConfigFromEnv.projectId}')`;
-  
+
   if (!firebaseInitializationError) {
     firebaseInitializationError = errorMessage;
   }
-  console.error("FIREBASE_ENV_VAR_ERROR:", errorMessage);
+  console.error("FIREBASE_ENV_VAR_ERROR:", firebaseInitializationError);
 }
 
 
 if (!firebaseInitializationError) {
   try {
+    const firebaseConfig = {
+      apiKey: firebaseConfigFromEnv.apiKey as string,
+      authDomain: firebaseConfigFromEnv.authDomain as string,
+      projectId: firebaseConfigFromEnv.projectId as string,
+      storageBucket: firebaseConfigFromEnv.storageBucket as string,
+      messagingSenderId: firebaseConfigFromEnv.messagingSenderId as string,
+      appId: firebaseConfigFromEnv.appId as string,
+    };
+
     if (!getApps().length) {
-      app = initializeApp({
-        apiKey: firebaseConfigFromEnv.apiKey as string,
-        authDomain: firebaseConfigFromEnv.authDomain as string,
-        projectId: firebaseConfigFromEnv.projectId as string,
-        storageBucket: firebaseConfigFromEnv.storageBucket as string,
-        messagingSenderId: firebaseConfigFromEnv.messagingSenderId as string,
-        appId: firebaseConfigFromEnv.appId as string,
-      });
+      app = initializeApp(firebaseConfig);
     } else {
       app = getApp();
     }
     auth = getAuth(app);
     db = getFirestore(app);
+    console.log("Firebase initialized successfully using environment variables.");
   } catch (error: any) {
     let detailedErrorMessage = `CRITICAL: Firebase initialization of core services FAILED.
     Error: ${error.message || error}
@@ -102,5 +107,6 @@ if (!firebaseInitializationError) {
 if (firebaseInitializationError && auth === undefined && db === undefined) {
   console.error("Firebase Initialization resulted in an error, Auth and DB services are unavailable. Review previous logs for details. Error:", firebaseInitializationError);
 }
+
 
 export { app, auth, db, firebaseInitializationError };
