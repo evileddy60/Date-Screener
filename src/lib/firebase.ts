@@ -16,9 +16,15 @@ const firebaseConfig = {
 // Log the configuration object that will be used
 console.log("Firebase configuration object being used:", firebaseConfig);
 
-// Check if projectId is defined. This is crucial for Firestore and other services.
+// Check if critical Firebase configuration values are defined.
+if (!firebaseConfig.apiKey) {
+  const errorMessage = "Firebase API Key is not defined. Please ensure NEXT_PUBLIC_FIREBASE_API_KEY is correctly set in your Firebase Studio project's environment variable settings.";
+  console.error(errorMessage);
+  throw new Error(errorMessage);
+}
+
 if (!firebaseConfig.projectId) {
-  const errorMessage = "Firebase project ID is not defined. Please ensure NEXT_PUBLIC_FIREBASE_PROJECT_ID is correctly set in your Firebase Studio environment variable settings for deployed apps, or in your local .env file for local development (e.g., when running 'npm run dev').";
+  const errorMessage = "Firebase project ID is not defined. Please ensure NEXT_PUBLIC_FIREBASE_PROJECT_ID is correctly set in your Firebase Studio project's environment variable settings. This is crucial for Firestore and other services.";
   console.error(errorMessage);
   throw new Error(errorMessage);
 }
@@ -42,4 +48,3 @@ if (db && db.app && db.app.options) {
 
 
 export { app, auth, db };
-
