@@ -6,7 +6,7 @@ import { USER_ROLES } from '@/lib/constants';
 import { defaultPrivacySettings } from '@/types'; 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase'; 
+import { auth, firebaseInitializationError } from '@/lib/firebase'; 
 import { 
   User as FirebaseUser, 
   onAuthStateChanged, 
@@ -39,6 +39,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (firebaseInitializationError) {
+      console.error("AuthContext: Firebase did not initialize correctly, AuthProvider will not proceed.", firebaseInitializationError);
+      setIsLoading(false);
+      // Optionally, you could redirect to an error page or show a global banner
+      // For now, it just prevents further Firebase interactions that would fail.
+      return;
+    }
+    if (!auth) {
+      console.error("AuthContext: Firebase auth instance is not available. Firebase might not have initialized correctly.");
+      setIsLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
       if (user) {
@@ -49,13 +62,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (profile) {
             if (!profile.privacySettings) {
               profile.privacySettings = defaultPrivacySettings;
-              // No need to await setUserProfile here if it's just defaulting, 
-              // but if critical for immediate next steps, can await.
-              // For now, let's assume UI can handle transient state if settings are immediately used.
             }
             setCurrentUser(profile);
           } else {
-            // Profile not in Firestore, create default and save it
             const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'New Matcher');
             const newProfile: UserProfile = {
               id: user.uid,
@@ -71,15 +80,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch (error: any) {
           console.error("AuthContext: Error fetching or setting up user profile:", error);
-          // If profile fetch fails due to permissions, user might be stuck in loading or redirected.
-          // Depending on rules, they might not even be able to create their own profile.
-          // This error needs to be handled gracefully, perhaps by redirecting to an error page or login.
-          setCurrentUser(null); // Ensure no stale/partial user data
-          setFirebaseUser(null); // Log out Firebase user state if profile is inaccessible
+          setCurrentUser(null); 
+          setFirebaseUser(null); 
           if (error.code === 'permission-denied' || error.message.includes('Missing or insufficient permissions')) {
              toast({ variant: "destructive", title: "Access Error", description: "Could not load your profile. Please check permissions or contact support." });
-             // Consider redirecting to login after a delay or if not already on login
-             // router.push('/auth/login');
           }
         }
       } else {
@@ -91,9 +95,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [router, toast]); // Added router and toast to dependency array
+  }, [router, toast]);
 
   const loginUser = async (email: string, password_for_firebase: string) => {
+    if (firebaseInitializationError || !auth) {
+      toast({ variant: "destructive", title: "Login Error", description: "Firebase not initialized. Cannot log in." });
+      return;
+    }
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password_for_firebase);
@@ -109,6 +117,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signupUser = async (email: string, password_for_firebase: string, name_from_form: string) => {
+     if (firebaseInitializationError || !auth) {
+      toast({ variant: "destructive", title: "Signup Error", description: "Firebase not initialized. Cannot sign up." });
+      return;
+    }
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password_for_firebase);
@@ -138,9 +150,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logoutUser = async () => {
+    if (firebaseInitializationError || !auth) {
+      toast({ variant: "destructive", title: "Logout Error", description: "Firebase not initialized. Cannot log out." });
+      // Still attempt local cleanup
+      setFirebaseUser(null);
+      setCurrentUser(null);
+      localStorage.removeItem('activeFirebaseUserId');
+      router.push('/auth/login');
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       await signOut(auth);
+      // onAuthStateChanged will set currentUser and firebaseUser to null
       router.push('/auth/login');
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
@@ -151,9 +174,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  const isAuthenticated = !!firebaseUser && !!currentUser && currentUser.role === USER_ROLES.RECOMMENDER;
+  const isAuthenticated = !!firebaseUser && !!currentUser && currentUser.role === USER_ROLES.RECOMMENDER && !firebaseInitializationError;
 
   const updateUserProfile = async (updatedProfile: UserProfile) => {
+    if (firebaseInitializationError) {
+      toast({ variant: "destructive", title: "Update Error", description: "Firebase not initialized. Cannot update profile." });
+      return;
+    }
     if (firebaseUser && firebaseUser.uid === updatedProfile.id) {
       const profileToSave = {
         ...updatedProfile,
@@ -189,3 +216,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
