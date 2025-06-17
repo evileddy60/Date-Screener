@@ -6,7 +6,7 @@ import { USER_ROLES } from '@/lib/constants';
 import { defaultPrivacySettings } from '@/types'; 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth, firebaseInitializationError } from '@/lib/firebase'; 
+import { auth, firebaseInitializationError, db } from '@/lib/firebase'; // Added db and firebaseInitializationError
 import { 
   User as FirebaseUser, 
   onAuthStateChanged, 
@@ -16,7 +16,7 @@ import {
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 import { generateUniqueAvatarSvgDataUri } from '@/lib/utils'; 
-import { getUserProfile, setUserProfile } from '@/lib/firestoreService'; // Import Firestore functions
+import { getUserProfile, setUserProfile } from '@/lib/firestoreService';
 
 interface AuthContextType {
   currentUser: UserProfile | null;
@@ -71,6 +71,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       if (user) {
         setFirebaseUser(user);
+        if (!db) { // Check if db is available
+          console.error("AuthContext: Firestore DB instance is not available. Cannot fetch/set user profile.");
+          toast({ variant: "destructive", title: "Profile Error", description: "Database service unavailable. Cannot load profile." });
+          setCurrentUser(null); // Or a default non-functional profile
+          setIsLoading(false);
+          return;
+        }
         try {
           let profile = await getUserProfile(user.uid); 
           
@@ -117,7 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loginUser = async (email: string, password_for_firebase: string) => {
     if (firebaseInitializationError || !auth) {
       toast({ variant: "destructive", title: "Login Error", description: "Firebase not initialized. Cannot log in." });
-      setIsLoading(false); // Ensure loading state is reset
+      setIsLoading(false); 
       return;
     }
     setIsLoading(true);
@@ -135,9 +142,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signupUser = async (email: string, password_for_firebase: string, name_from_form: string) => {
-     if (firebaseInitializationError || !auth) {
-      toast({ variant: "destructive", title: "Signup Error", description: "Firebase not initialized. Cannot sign up." });
-      setIsLoading(false); // Ensure loading state is reset
+     if (firebaseInitializationError || !auth || !db) { // Added !db check
+      toast({ variant: "destructive", title: "Signup Error", description: "Firebase not initialized or DB unavailable. Cannot sign up." });
+      setIsLoading(false); 
       return;
     }
     setIsLoading(true);
@@ -171,7 +178,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logoutUser = async () => {
     if (firebaseInitializationError || !auth) {
       toast({ variant: "destructive", title: "Logout Error", description: "Firebase not initialized. Cannot log out." });
-      // Still attempt local cleanup
       setFirebaseUser(null);
       setCurrentUser(null);
       localStorage.removeItem('activeFirebaseUserId');
@@ -182,22 +188,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signOut(auth);
-      // onAuthStateChanged will set currentUser and firebaseUser to null
       router.push('/auth/login');
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch (error: any) {
       console.error("Firebase logout error:", error);
       toast({ variant: "destructive", title: "Logout Failed", description: error.message });
     } finally {
-      setIsLoading(false);
+      // onAuthStateChanged will set currentUser and firebaseUser to null
+      // but ensure isLoading is false regardless.
+      setIsLoading(false); 
     }
   };
   
   const isAuthenticated = !!firebaseUser && !!currentUser && currentUser.role === USER_ROLES.RECOMMENDER && !firebaseInitializationError;
 
   const updateUserProfile = async (updatedProfile: UserProfile) => {
-    if (firebaseInitializationError) {
-      toast({ variant: "destructive", title: "Update Error", description: "Firebase not initialized. Cannot update profile." });
+    if (firebaseInitializationError || !db) { // Added !db check
+      toast({ variant: "destructive", title: "Update Error", description: "Firebase not initialized or DB unavailable. Cannot update profile." });
       return;
     }
     if (firebaseUser && firebaseUser.uid === updatedProfile.id) {
@@ -235,3 +242,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

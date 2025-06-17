@@ -34,9 +34,7 @@ if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key")
   console.error("FIREBASE_INIT_ERROR:", errorMessage);
   firebaseInitializationError = errorMessage;
   if (!isServer) { 
-    // Only throw client-side to prevent server crash during build or startup if env vars aren't perfectly set yet
-    // The AuthContext will check firebaseInitializationError and prevent Firebase usage.
-    // throw new Error(errorMessage); // Temporarily commented out to avoid server crash loops
+    throw new Error(errorMessage);
   }
 }
 
@@ -45,7 +43,7 @@ if (!firebaseConfig.projectId && !firebaseInitializationError) {
   console.error("FIREBASE_INIT_ERROR:", errorMessage);
   firebaseInitializationError = errorMessage;
   if (!isServer) {
-    // throw new Error(errorMessage); // Temporarily commented out
+    throw new Error(errorMessage);
   }
 }
 
@@ -54,7 +52,7 @@ if (!firebaseConfig.authDomain && !firebaseInitializationError) {
   console.error("FIREBASE_INIT_ERROR:", errorMessage);
   firebaseInitializationError = errorMessage;
   if (!isServer) {
-    // throw new Error(errorMessage); // Temporarily commented out
+    throw new Error(errorMessage);
   }
 }
 
@@ -75,7 +73,7 @@ if (!firebaseInitializationError) {
       console.error("Using firebaseConfig during failed init:", firebaseConfig);
       firebaseInitializationError = errorMessage;
       if (!isServer) {
-        // throw initError; // Temporarily commented out
+        throw initError; 
       }
     }
   } else {
@@ -101,7 +99,7 @@ if (!firebaseInitializationError) {
       console.error("App object used for getAuth:", app);
       firebaseInitializationError = errorMessage;
       if (!isServer) {
-        // throw authError; // Temporarily commented out
+        throw authError; 
       }
       // @ts-ignore
       auth = undefined; 
@@ -119,7 +117,7 @@ if (!firebaseInitializationError) {
       console.error("App object used for getFirestore:", app);
       firebaseInitializationError = errorMessage;
       if (!isServer) {
-        // throw firestoreError; // Temporarily commented out
+        throw firestoreError; 
       }
       // @ts-ignore
       db = undefined; 
@@ -137,3 +135,4 @@ if (!firebaseInitializationError) {
 
 
 export { app, auth, db, firebaseInitializationError };
+
