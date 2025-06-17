@@ -32,27 +32,28 @@ if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key")
   const errorMessage = "CRITICAL ERROR: Firebase API Key is UNDEFINED or is a PLACEHOLDER in firebaseConfig. Check environment variables (NEXT_PUBLIC_FIREBASE_API_KEY). Value: " + firebaseConfig.apiKey;
   console.error("FIREBASE_INIT_ERROR:", errorMessage);
   firebaseInitializationError = errorMessage;
-  // if (!isServer) { // Temporarily removing client-side throw to ensure all logs can be seen
-  //   // throw new Error(errorMessage); 
-  // }
+  if (!isServer && process.env.NODE_ENV === 'development') { 
+    // Only throw client-side in development to avoid crashing production server
+    // throw new Error(errorMessage); 
+  }
 }
 
 if (!firebaseConfig.projectId && !firebaseInitializationError) {
   const errorMessage = "CRITICAL ERROR: Firebase Project ID is UNDEFINED in firebaseConfig. Check environment variables (NEXT_PUBLIC_FIREBASE_PROJECT_ID). Value: " + firebaseConfig.projectId;
   console.error("FIREBASE_INIT_ERROR:", errorMessage);
   firebaseInitializationError = errorMessage;
-  // if (!isServer) {
-  //   // throw new Error(errorMessage); 
-  // }
+  if (!isServer && process.env.NODE_ENV === 'development') {
+    // throw new Error(errorMessage); 
+  }
 }
 
 if (!firebaseConfig.authDomain && !firebaseInitializationError) {
   const errorMessage = "CRITICAL ERROR: Firebase Auth Domain is UNDEFINED in firebaseConfig. Check environment variables (NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN). Value: " + firebaseConfig.authDomain;
   console.error("FIREBASE_INIT_ERROR:", errorMessage);
   firebaseInitializationError = errorMessage;
-  // if (!isServer) {
-  //   // throw new Error(errorMessage); 
-  // }
+  if (!isServer && process.env.NODE_ENV === 'development') {
+    // throw new Error(errorMessage); 
+  }
 }
 
 if (!firebaseInitializationError) {
@@ -64,9 +65,9 @@ if (!firebaseInitializationError) {
       const errorMessage = `CRITICAL: Firebase initializeApp FAILED: ${initError.message || initError}`;
       console.error("FIREBASE_INIT_ERROR:", errorMessage);
       firebaseInitializationError = errorMessage;
-      // if (!isServer) {
-      //   // throw initError;  
-      // }
+      if (!isServer && process.env.NODE_ENV === 'development') {
+        // throw initError;  
+      }
     }
   } else {
     app = getApp();
@@ -82,9 +83,9 @@ if (!firebaseInitializationError) {
       const errorMessage = `CRITICAL: Firebase getAuth FAILED: ${authError.message || authError}`;
       console.error("FIREBASE_INIT_ERROR:", errorMessage);
       firebaseInitializationError = errorMessage;
-      // if (!isServer) {
-      //   // throw authError;  
-      // }
+      if (!isServer && process.env.NODE_ENV === 'development') {
+        // throw authError;  
+      }
       // @ts-ignore
       auth = undefined; 
     }
@@ -96,9 +97,9 @@ if (!firebaseInitializationError) {
       const errorMessage = `CRITICAL: Firebase getFirestore FAILED: ${firestoreError.message || firestoreError}`;
       console.error("FIREBASE_INIT_ERROR:", errorMessage);
       firebaseInitializationError = errorMessage;
-      // if (!isServer) {
-      //   // throw firestoreError; 
-      // }
+      if (!isServer && process.env.NODE_ENV === 'development') {
+        // throw firestoreError; 
+      }
       // @ts-ignore
       db = undefined; 
     }
@@ -114,4 +115,3 @@ if (!firebaseInitializationError) {
 }
 
 export { app, auth, db, firebaseInitializationError };
-
