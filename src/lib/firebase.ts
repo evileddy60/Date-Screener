@@ -25,7 +25,7 @@ if (typeof window === 'undefined') {
   // console.log("CLIENT_SIDE_FIREBASE_INIT_ATTEMPT: src/lib/firebase.ts is being executed client-side.");
 }
 
-// Check if critical config values are present
+// Check if critical config values are present (directly in the hardcoded object)
 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
   const errorMessage = `CRITICAL FIREBASE CONFIG ERROR: The hardcoded firebaseConfig object in src/lib/firebase.ts is missing apiKey or projectId. Firebase cannot initialize.
     API Key (hardcoded): '${firebaseConfig.apiKey}'
@@ -47,6 +47,7 @@ if (!firebaseInitializationError) {
     }
     auth = getAuth(app);
     db = getFirestore(app);
+    // console.log("Firebase initialized successfully with hardcoded config."); // Diagnostic log
   } catch (error: any) {
     let detailedErrorMessage = `CRITICAL: Firebase initialization of core services FAILED.
     Error: ${error.message || error}
@@ -79,3 +80,4 @@ if (firebaseInitializationError && auth === undefined && db === undefined) {
 }
 
 export { app, auth, db, firebaseInitializationError };
+
