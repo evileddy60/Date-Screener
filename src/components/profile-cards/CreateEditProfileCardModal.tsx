@@ -82,16 +82,6 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
   useEffect(() => {
     if (isOpen) {
       if (profileCard) {
-        const initialSeeking = profileCard.preferences?.seeking;
-        let seekingAsArray: string[] = [];
-        if (Array.isArray(initialSeeking)) {
-          seekingAsArray = initialSeeking;
-        } else if (typeof initialSeeking === 'string' && initialSeeking.trim() !== '') {
-          // If it's a string (old data), wrap it in an array.
-          // This assumes the old string value was a single valid seeking option.
-          seekingAsArray = [initialSeeking];
-        }
-
         form.reset({
           friendName: profileCard.friendName,
           friendEmail: profileCard.friendEmail || '',
@@ -100,7 +90,7 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
           photoUrl: profileCard.photoUrl || '',
           preferences: {
             ageRange: profileCard.preferences?.ageRange || '',
-            seeking: seekingAsArray, // Use the converted array
+            seeking: profileCard.preferences?.seeking || [], // Simplified: assume seeking is array or empty
             gender: profileCard.preferences?.gender || '',
             location: profileCard.preferences?.location || '',
           },
@@ -384,3 +374,6 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
     </Dialog>
   );
 }
+
+
+    
