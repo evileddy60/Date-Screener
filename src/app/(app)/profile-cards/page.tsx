@@ -8,7 +8,7 @@ import type { ProfileCard as ProfileCardType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ProfileCardDisplay } from '@/components/profile-cards/ProfileCardDisplay';
 import { CreateEditProfileCardModal } from '@/components/profile-cards/CreateEditProfileCardModal';
-import { Loader2, PlusCircle, UserX, BookOpen, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, UserX, BookOpen, Trash2, AlertTriangleIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
@@ -24,6 +24,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+
+const MAX_PROFILE_CARDS_LIMIT = 5;
 
 export default function ProfileCardsPage() {
   const { currentUser, isLoading: authLoading } = useAuth();
@@ -52,6 +54,7 @@ export default function ProfileCardsPage() {
           setMyProfileCards(cards.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         } catch (error) {
           console.error("Error fetching profile cards:", error);
+          toast({ variant: "destructive", title: "Load Failed", description: "Could not fetch profile cards." });
         } finally {
           setIsLoadingData(false);
         }
@@ -60,9 +63,17 @@ export default function ProfileCardsPage() {
       }
     }
     fetchCards();
-  }, [currentUser, authLoading, router]);
+  }, [currentUser, authLoading, router, toast]);
 
   const handleOpenCreateModal = () => {
+    if (myProfileCards.length >= MAX_PROFILE_CARDS_LIMIT) {
+      toast({
+        variant: "destructive",
+        title: "Profile Card Limit Reached",
+        description: `You can only create up to ${MAX_PROFILE_CARDS_LIMIT} profile cards. Please delete an existing card to add a new one.`,
+      });
+      return;
+    }
     setEditingProfileCard(null);
     setIsModalOpen(true);
   };
@@ -80,11 +91,22 @@ export default function ProfileCardsPage() {
   const handleProfileCardSaved = async (savedCardData: Omit<ProfileCardType, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'>, existingCardId?: string) => {
     if (!currentUser) return;
 
+    if (!existingCardId && myProfileCards.length >= MAX_PROFILE_CARDS_LIMIT) {
+      toast({
+        variant: "destructive",
+        title: "Profile Card Limit Reached",
+        description: `Cannot save new card. You have reached the limit of ${MAX_PROFILE_CARDS_LIMIT} profile cards.`,
+      });
+      handleCloseModal();
+      return;
+    }
+
     try {
       if (existingCardId) {
         const originalCard = myProfileCards.find(c => c.id === existingCardId);
         if (!originalCard) {
             console.error("Original card not found for update");
+            toast({variant: "destructive", title: "Save Failed", description: "Original card data missing for update."})
             return;
         }
         const cardToUpdate: ProfileCardType = {
@@ -100,12 +122,15 @@ export default function ProfileCardsPage() {
                 .map(card => (card.id === existingCardId ? cardToUpdate : card))
                 .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         );
+        toast({ title: "Profile Card Updated!", description: `${cardToUpdate.friendName}'s profile has been successfully updated.` });
+
       } else {
         const newCard = await addProfileCard(savedCardData, currentUser.id, currentUser.name);
         setMyProfileCards(prevCards => 
             [newCard, ...prevCards]
                 .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         );
+        toast({ title: "Profile Card Created!", description: `${newCard.friendName}'s profile has been successfully created.` });
       }
     } catch (error) {
       console.error("Error saving profile card:", error);
@@ -167,16 +192,34 @@ export default function ProfileCardsPage() {
    );
  }
 
+  const canCreateMoreCards = myProfileCards.length < MAX_PROFILE_CARDS_LIMIT;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="text-center sm:text-left">
             <h1 className="font-headline text-4xl font-semibold text-primary">My Profile Cards</h1>
+             <p className="font-body text-muted-foreground">You have created {myProfileCards.length} of {MAX_PROFILE_CARDS_LIMIT} allowed profile cards.</p>
         </div>
-        <Button onClick={handleOpenCreateModal} className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md">
+        <Button 
+          onClick={handleOpenCreateModal} 
+          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md"
+          disabled={!canCreateMoreCards}
+          title={!canCreateMoreCards ? `You have reached the limit of ${MAX_PROFILE_CARDS_LIMIT} profile cards.` : "Create a new profile card for a friend"}
+        >
           <PlusCircle className="mr-2 h-5 w-5" /> Create New Profile Card
         </Button>
       </div>
+
+      {!canCreateMoreCards && myProfileCards.length > 0 && (
+        <Alert variant="default" className="bg-yellow-500/10 border-yellow-600/30 text-yellow-700">
+          <AlertTriangleIcon className="h-4 w-4 !text-yellow-600" />
+          <AlertTitle className="font-headline !text-yellow-700">Profile Card Limit Reached</AlertTitle>
+          <AlertDescription className="!text-yellow-700/90">
+            You have reached the maximum of {MAX_PROFILE_CARDS_LIMIT} profile cards. To create a new one, please delete an existing card.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {myProfileCards.length === 0 ? (
         <Card className="text-center py-12">
@@ -207,12 +250,14 @@ export default function ProfileCardsPage() {
         </div>
       )}
 
-      <CreateEditProfileCardModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        profileCard={editingProfileCard}
-        onSave={(data, id) => handleProfileCardSaved(data, id)}
-      />
+      {isModalOpen && (
+        <CreateEditProfileCardModal
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            profileCard={editingProfileCard}
+            onSave={(data, id) => handleProfileCardSaved(data, id)}
+        />
+      )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
