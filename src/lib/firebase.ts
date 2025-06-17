@@ -3,12 +3,12 @@ import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-// Your web app's Firebase configuration (using the hardcoded values)
+// Your web app's Firebase configuration (hardcoded as per user confirmation)
 const firebaseConfig = {
   apiKey: "AIzaSyCTznSshOmyhXqEvCHSPIqr8Z6OC9Yz7Ek",
   authDomain: "date-screener.firebaseapp.com",
   projectId: "date-screener",
-  storageBucket: "date-screener.firebasestorage.app", // Corrected from firebasestorage.app to .appspot.com if that's the typical pattern, user provided .app
+  storageBucket: "date-screener.firebasestorage.app",
   messagingSenderId: "350867348509",
   appId: "1:350867348509:web:fd4d6403f36f03ea637af4"
 };
@@ -20,12 +20,12 @@ let firebaseInitializationError: string | null = null;
 
 // This log is just to see if this file is executed on server or client
 if (typeof window === 'undefined') {
-  console.log("SERVER_SIDE_FIREBASE_INIT_ATTEMPT: src/lib/firebase.ts is being executed server-side.");
+  // console.log("SERVER_SIDE_FIREBASE_INIT_ATTEMPT: src/lib/firebase.ts is being executed server-side.");
 } else {
-  console.log("CLIENT_SIDE_FIREBASE_INIT_ATTEMPT: src/lib/firebase.ts is being executed client-side.");
+  // console.log("CLIENT_SIDE_FIREBASE_INIT_ATTEMPT: src/lib/firebase.ts is being executed client-side.");
 }
 
-// Check if critical config values are present (even if hardcoded, good to be robust)
+// Check if critical config values are present
 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
   const errorMessage = `CRITICAL FIREBASE CONFIG ERROR: The hardcoded firebaseConfig object in src/lib/firebase.ts is missing apiKey or projectId. Firebase cannot initialize.
     API Key (hardcoded): '${firebaseConfig.apiKey}'
@@ -62,6 +62,7 @@ if (!firebaseInitializationError) {
     if (!firebaseInitializationError) {
         firebaseInitializationError = detailedErrorMessage;
     }
+    // Ensure services are undefined if init fails
     app = undefined;
     auth = undefined;
     db = undefined;
