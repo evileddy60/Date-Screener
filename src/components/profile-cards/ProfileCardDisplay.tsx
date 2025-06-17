@@ -71,8 +71,28 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch }: Profile
             {profileCard.preferences.ageRange && (
               <p className="flex items-center gap-1"><CalendarDays className="w-3 h-3 text-primary/70"/> Age: {profileCard.preferences.ageRange}</p>
             )}
-            {profileCard.preferences.seeking && profileCard.preferences.seeking.length > 0 && (
-              <p className="flex items-start gap-1"><Heart className="w-3 h-3 text-primary/70 mt-0.5"/> Seeking: {profileCard.preferences.seeking.join(', ')}</p>
+            {profileCard.preferences.seeking && (
+              (() => {
+                const seekingValue = profileCard.preferences.seeking;
+                let displayText = '';
+
+                if (Array.isArray(seekingValue)) {
+                  if (seekingValue.length > 0) {
+                    displayText = seekingValue.join(', ');
+                  }
+                } else if (typeof seekingValue === 'string' && seekingValue.trim() !== '') {
+                  displayText = seekingValue; // It's an old string value
+                }
+
+                if (displayText) {
+                  return (
+                    <p className="flex items-start gap-1">
+                      <Heart className="w-3 h-3 text-primary/70 mt-0.5" /> Seeking: {displayText}
+                    </p>
+                  );
+                }
+                return null;
+              })()
             )}
             {profileCard.preferences.gender && (
               <p className="flex items-center gap-1"><UsersIcon className="w-3 h-3 text-primary/70"/> Gender: {profileCard.preferences.gender}</p>

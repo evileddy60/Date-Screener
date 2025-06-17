@@ -82,6 +82,16 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
   useEffect(() => {
     if (isOpen) {
       if (profileCard) {
+        const initialSeeking = profileCard.preferences?.seeking;
+        let seekingAsArray: string[] = [];
+        if (Array.isArray(initialSeeking)) {
+          seekingAsArray = initialSeeking;
+        } else if (typeof initialSeeking === 'string' && initialSeeking.trim() !== '') {
+          // If it's a string (old data), wrap it in an array.
+          // This assumes the old string value was a single valid seeking option.
+          seekingAsArray = [initialSeeking];
+        }
+
         form.reset({
           friendName: profileCard.friendName,
           friendEmail: profileCard.friendEmail || '',
@@ -90,36 +100,39 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
           photoUrl: profileCard.photoUrl || '',
           preferences: {
             ageRange: profileCard.preferences?.ageRange || '',
-            seeking: profileCard.preferences?.seeking || [],
+            seeking: seekingAsArray, // Use the converted array
             gender: profileCard.preferences?.gender || '',
             location: profileCard.preferences?.location || '',
           },
         });
-        // Initialize sliders from profileCard
+        
         if (profileCard.preferences?.ageRange) {
           const [min, max] = profileCard.preferences.ageRange.split('-').map(Number);
-          if (!isNaN(min) && !isNaN(max)) setCurrentAgeRange([min, max]);
-          else setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
+          if (!isNaN(min) && !isNaN(max) && min >= MIN_AGE && max <= MAX_AGE && min <=max) {
+            setCurrentAgeRange([min, max]);
+          } else {
+            setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
+          }
         } else {
           setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
         }
         if (profileCard.preferences?.location) {
           const prox = parseInt(profileCard.preferences.location);
-          if (!isNaN(prox)) setCurrentProximity(prox);
-          else setCurrentProximity(50);
+           if (!isNaN(prox) && prox >= MIN_PROXIMITY && prox <= MAX_PROXIMITY) {
+            setCurrentProximity(prox);
+          } else {
+            setCurrentProximity(50);
+          }
         } else {
           setCurrentProximity(50);
         }
       } else {
         form.reset({
           friendName: '', friendEmail: '', bio: '', interests: '', photoUrl: '',
-          preferences: { ageRange: '', seeking: [], gender: '', location: '' },
+          preferences: { ageRange: `${MIN_AGE}-${MIN_AGE + 10}`, seeking: [], gender: '', location: `${50} km` },
         });
         setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
         setCurrentProximity(50);
-        // Set default slider string values in form on create
-        form.setValue('preferences.ageRange', `${MIN_AGE}-${MIN_AGE + 10}`);
-        form.setValue('preferences.location', `${50} km`);
       }
     }
   }, [profileCard, isOpen, form]);
@@ -135,11 +148,11 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
       friendName: data.friendName,
       friendEmail: data.friendEmail,
       bio: data.bio,
-      interests: data.interests, // Zod transformed this
+      interests: data.interests, 
       photoUrl: data.photoUrl,
       preferences: {
         ageRange: data.preferences?.ageRange,
-        seeking: data.preferences?.seeking,
+        seeking: data.preferences?.seeking, 
         gender: data.preferences?.gender,
         location: data.preferences?.location,
       },
@@ -158,7 +171,7 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
 
   const handleDialogClose = () => {
     if (!isSubmitting) {
-      form.reset();
+      form.reset(); // Reset form on close if not submitting
       onClose();
     }
   };
@@ -246,14 +259,14 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
             <FormField
               control={form.control}
               name="preferences.ageRange"
-              render={({ field }) => ( // field is not directly used by slider, currentAgeRange is
+              render={({ field }) => ( 
                 <FormItem>
                   <FormLabel className="font-body">Preferred Age Range: {currentAgeRange[0]} - {currentAgeRange[1]}</FormLabel>
                   <Slider
                     value={currentAgeRange}
                     onValueChange={(newVal) => {
                       setCurrentAgeRange(newVal);
-                      field.onChange(`${newVal[0]}-${newVal[1]}`); // Update RHF field
+                      field.onChange(`${newVal[0]}-${newVal[1]}`); 
                     }}
                     min={MIN_AGE}
                     max={MAX_AGE}
@@ -283,10 +296,11 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
                               <Checkbox
                                 checked={field.value?.includes(option)}
                                 onCheckedChange={(checked) => {
+                                  const currentValue = Array.isArray(field.value) ? field.value : [];
                                   return checked
-                                    ? field.onChange([...(field.value || []), option])
+                                    ? field.onChange([...currentValue, option])
                                     : field.onChange(
-                                        (field.value || []).filter(
+                                        currentValue.filter(
                                           (value) => value !== option
                                         )
                                       );
@@ -336,14 +350,14 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
             <FormField
               control={form.control}
               name="preferences.location"
-              render={({ field }) => ( // field not directly used, currentProximity is
+              render={({ field }) => ( 
                 <FormItem>
                   <FormLabel className="font-body">Preferred Proximity: {currentProximity} km</FormLabel>
                    <Slider
-                    value={[currentProximity]} // Slider expects an array
+                    value={[currentProximity]} 
                     onValueChange={(newVal) => {
                         setCurrentProximity(newVal[0]);
-                        field.onChange(`${newVal[0]} km`); // Update RHF field
+                        field.onChange(`${newVal[0]} km`); 
                     }}
                     min={MIN_PROXIMITY}
                     max={MAX_PROXIMITY}
@@ -359,7 +373,7 @@ export function CreateEditProfileCardModal({ isOpen, onClose, profileCard, onSav
               <Button type="button" variant="outline" onClick={handleDialogClose} className="border-muted text-muted-foreground hover:bg-muted/20" disabled={isSubmitting}>
                 <X className="mr-2 h-4 w-4" /> Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button type="submit" disabled={isSubmitting || !form.formState.isValid} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 {isSubmitting ? <Save className="mr-2 h-4 w-4 animate-pulse" /> : <Save className="mr-2 h-4 w-4" />}
                 {profileCard ? 'Save Changes' : 'Create Profile Card'}
               </Button>
