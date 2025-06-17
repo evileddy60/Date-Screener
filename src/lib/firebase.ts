@@ -93,3 +93,4 @@ if (firebaseInitializationError && !isServer && typeof window !== 'undefined') {
 }
 
 export { app, auth, db, firebaseInitializationError };
+
