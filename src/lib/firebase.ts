@@ -29,7 +29,7 @@ let firebaseInitializationError: string | null = null;
 
 const isServer = typeof window === 'undefined';
 
-if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key" || firebaseConfig.apiKey === "AIzaSyCZ0LHVRW1lUU_DBwkIcjhNvyq6x9DmC5I") {
+if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "your_firebase_api_key") {
   const errorMessage = "CRITICAL ERROR: Firebase API Key is UNDEFINED or is a PLACEHOLDER in firebaseConfig. Check environment variables (NEXT_PUBLIC_FIREBASE_API_KEY). Value: " + firebaseConfig.apiKey;
   console.error("FIREBASE_INIT_ERROR:", errorMessage);
   firebaseInitializationError = errorMessage;
@@ -135,3 +135,4 @@ if (!firebaseInitializationError) {
 
 
 export { app, auth, db, firebaseInitializationError };
+
