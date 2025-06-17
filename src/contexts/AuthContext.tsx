@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Log the env vars the client-side sees
+    // Log the env vars the client-side sees - important for debugging .env setup
     if (typeof window !== 'undefined') {
       console.log("CLIENT_SIDE_AUTH_CONTEXT: NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
       console.log("CLIENT_SIDE_AUTH_CONTEXT: NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
@@ -48,12 +48,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (firebaseInitializationError) {
       console.error("AuthContext: Firebase did not initialize correctly, AuthProvider will not proceed.", firebaseInitializationError);
       if (typeof window !== 'undefined') {
-        toast({
-          variant: "destructive",
-          title: "Firebase Critical Error",
-          description: `Firebase services could not be initialized. Some features may not work. Please check Firebase configuration (e.g., in .env file or Firebase Studio settings) and console logs. Error: ${firebaseInitializationError}`,
-          duration: 10000
-        });
+        // Only show toast if the error is the generic init error from firebase.ts
+        // Specific errors like unauthorized-domain are handled elsewhere or become apparent during usage.
+        if (firebaseInitializationError.startsWith("CRITICAL FIREBASE ENV VAR ERROR") || firebaseInitializationError.startsWith("CRITICAL: Firebase initialization of core services FAILED")) {
+          toast({
+            variant: "destructive",
+            title: "Firebase Critical Error",
+            description: `Firebase services could not be initialized. Some features may not work. Please check Firebase configuration (e.g., in .env file or Firebase Studio settings) and console logs. Error: ${firebaseInitializationError}`,
+            duration: 10000
+          });
+        }
       }
       setIsLoading(false);
       return;
@@ -139,7 +143,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const handleGoogleSignIn = async (isSignUp: boolean = false) => {
     if (firebaseInitializationError || !auth) {
-      toast({ variant: "destructive", title: "Sign-in Error", description: `Firebase not initialized or auth service unavailable. Cannot sign in. Please check environment variables (e.g. in .env file or Firebase Studio settings). Error: ${firebaseInitializationError || 'Auth service missing.'}` });
+      // The firebaseInitializationError toast is now handled in the useEffect, so just log here or have a more generic toast.
+      console.error("handleGoogleSignIn: Firebase not initialized or auth service unavailable.", firebaseInitializationError);
+      toast({ variant: "destructive", title: "Sign-in Error", description: `Firebase services are not ready. Please check the console for critical Firebase errors.` });
       setIsLoading(false);
       return;
     }
