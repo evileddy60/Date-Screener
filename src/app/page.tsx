@@ -68,7 +68,7 @@ export default function HomePage() {
         </Button>
       </div>
 
-      <div className="mt-16 w-full max-w-4xl p-8 bg-muted/30 rounded-xl shadow-inner text-center">
+      <div className="mt-16 w-full max-w-4xl mx-auto p-8 bg-muted/30 rounded-xl shadow-inner text-center">
         <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <h3 className="font-headline text-xl text-muted-foreground">Future Ad Space</h3>
         <p className="font-body text-sm text-muted-foreground/80">
