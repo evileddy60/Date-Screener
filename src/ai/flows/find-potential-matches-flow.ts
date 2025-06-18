@@ -115,11 +115,13 @@ const findPotentialMatchesFlow = ai.defineFlow(
       throw new Error(`Target profile card with ID ${input.targetProfileCardId} not found.`);
     }
 
+    // Filter out the target card itself AND cards from the same matcher
     const candidateCardsFull = allProfileCardsFromDb.filter(
       pc => pc.id !== input.targetProfileCardId && pc.createdByMatcherId !== targetCardFull.createdByMatcherId
     );
 
     if (candidateCardsFull.length === 0) {
+      console.log("No candidate cards found after filtering for different matcher and non-target.");
       return { createdPotentialMatchIds: [] }; 
     }
     
@@ -165,19 +167,31 @@ const findPotentialMatchesFlow = ai.defineFlow(
     for (const suggestion of output.suggestions) {
       // CRITICAL FIX: Prevent self-matching
       if (suggestion.matchedProfileCardId === targetCardFull.id) {
-        console.warn(`AI suggested matching target card ID ${targetCardFull.id} with itself. Skipping this suggestion.`);
-        continue;
+        console.warn(`AI suggested matching target card ID ${targetCardFull.id} (Name: ${targetCardFull.friendName}) with itself (Matched Card ID from AI: ${suggestion.matchedProfileCardId}). Skipping this suggestion.`);
+        continue; // Skip this iteration
       }
 
       const matchedCardFull = allProfileCardsFromDb.find(pc => pc.id === suggestion.matchedProfileCardId);
       if (!matchedCardFull) {
-        console.warn(`Suggested matched card ID ${suggestion.matchedProfileCardId} not found in fetched data.`);
+        console.warn(`Suggested matched card ID ${suggestion.matchedProfileCardId} not found in fetched data. Skipping.`);
         continue;
       }
 
+      // Additional defense: ensure suggested card isn't from the same matcher (should be caught by candidate list prep, but good to double check AI output)
+      if (matchedCardFull.createdByMatcherId === targetCardFull.createdByMatcherId) {
+          console.warn(`AI suggested a match with a card from the same matcher (Target: ${targetCardFull.id}, Matched: ${matchedCardFull.id}, Matcher: ${targetCardFull.createdByMatcherId}). Skipping this suggestion.`);
+          continue;
+      }
+      
       const existingMatch = await findExistingPotentialMatch(targetCardFull.id, matchedCardFull.id);
       if (existingMatch) {
-        if (existingMatch.statusFriendA !== 'rejected' && existingMatch.statusFriendB !== 'rejected') {
+        // If a match record exists and isn't 'rejected' by relevant parties, don't create a new one.
+        // This condition might need adjustment based on how "re-matching" after rejection should work.
+        const isRejectedByMatchers = existingMatch.statusMatcherA === 'rejected' || existingMatch.statusMatcherB === 'rejected';
+        const isRejectedByFriends = existingMatch.statusFriendA === 'rejected' || existingMatch.statusFriendB === 'rejected';
+
+        if (!isRejectedByMatchers && !isRejectedByFriends) {
+            console.log(`An active or pending potential match already exists between ${targetCardFull.id} and ${matchedCardFull.id} (Status MatcherA: ${existingMatch.statusMatcherA}, MatcherB: ${existingMatch.statusMatcherB}). Skipping.`);
             continue;
         }
       }
@@ -197,8 +211,12 @@ const findPotentialMatchesFlow = ai.defineFlow(
         // createdAt will be set by addPotentialMatch
       };
 
-      const createdMatch = await addPotentialMatch(newPotentialMatchData); 
-      createdPotentialMatchIds.push(createdMatch.id);
+      try {
+        const createdMatch = await addPotentialMatch(newPotentialMatchData); 
+        createdPotentialMatchIds.push(createdMatch.id);
+      } catch(e: any) {
+        console.error(`Error creating potential match document for ${targetCardFull.id} and ${matchedCardFull.id}: ${e.message || e}`);
+      }
     }
 
     return { createdPotentialMatchIds };
