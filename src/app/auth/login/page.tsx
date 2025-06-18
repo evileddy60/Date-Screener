@@ -6,16 +6,15 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogIn, Sparkles, Loader2, Chrome } from 'lucide-react'; // Added Chrome for Google icon
+import { LogIn, Sparkles, Loader2, Chrome, DollarSign } from 'lucide-react'; 
 
 export default function LoginPage() {
   const { loginWithGoogle, isLoading } = useAuth();
-  const [error, setError] = useState(''); // Retained for potential future non-Google errors
+  const [error, setError] = useState(''); 
 
   const handleGoogleLogin = async () => {
     setError('');
     await loginWithGoogle();
-    // Errors from loginWithGoogle are handled by toast in AuthContext
   };
 
   return (
@@ -49,6 +48,16 @@ export default function LoginPage() {
           </p>
         </CardFooter>
       </Card>
+      <div className="mt-12 w-full max-w-md mx-auto p-6 bg-muted/30 rounded-xl shadow-inner text-center">
+        <DollarSign className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+        <h3 className="font-headline text-lg text-muted-foreground">Future Ad Space</h3>
+        <p className="font-body text-xs text-muted-foreground/80">
+          This area is reserved for future ad integration.
+        </p>
+      </div>
+      <footer className="mt-8 text-center text-xs text-muted-foreground">
+        © {new Date().getFullYear()} Date Screener.
+      </footer>
     </div>
   );
 }
