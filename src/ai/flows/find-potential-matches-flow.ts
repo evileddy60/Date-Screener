@@ -26,12 +26,11 @@ const ProfileCardPromptSchema = z.object({
   interests: z.array(z.string()),
   preferences: z.object({
     ageRange: z.string().optional(),
-    seeking: z.string().optional(),
+    seeking: z.string().optional(), // This should be string for the prompt as AI might not handle array well for seeking in prompt
     gender: z.string().optional(),
     location: z.string().optional(),
   }).optional(),
-  // Added for context, though AI might not use it directly unless prompted
-  // createdByMatcherId: z.string(), 
+  // createdByMatcherId: z.string(), // Context only, not directly used by AI unless prompted
 });
 type ProfileCardPrompt = z.infer<typeof ProfileCardPromptSchema>;
 
@@ -123,20 +122,32 @@ const findPotentialMatchesFlow = ai.defineFlow(
     if (candidateCardsFull.length === 0) {
       return { createdPotentialMatchIds: [] }; 
     }
+    
+    // Convert seeking array to string for the prompt if it's an array
+    const formatSeekingForPrompt = (seeking: string[] | string | undefined): string | undefined => {
+      if (Array.isArray(seeking)) return seeking.join(', ');
+      return seeking;
+    };
 
     const targetCardPromptData: ProfileCardPrompt = {
         id: targetCardFull.id,
         friendName: targetCardFull.friendName,
         bio: targetCardFull.bio,
         interests: targetCardFull.interests,
-        preferences: targetCardFull.preferences
+        preferences: targetCardFull.preferences ? {
+            ...targetCardFull.preferences,
+            seeking: formatSeekingForPrompt(targetCardFull.preferences.seeking)
+        } : undefined
     };
     const candidateCardsPromptData: ProfileCardPrompt[] = candidateCardsFull.map(card => ({
         id: card.id,
         friendName: card.friendName,
         bio: card.bio,
         interests: card.interests,
-        preferences: card.preferences,
+        preferences: card.preferences ? {
+            ...card.preferences,
+            seeking: formatSeekingForPrompt(card.preferences.seeking)
+        } : undefined,
     }));
 
     const {output} = await prompt({
@@ -152,6 +163,12 @@ const findPotentialMatchesFlow = ai.defineFlow(
     const createdPotentialMatchIds: string[] = [];
 
     for (const suggestion of output.suggestions) {
+      // CRITICAL FIX: Prevent self-matching
+      if (suggestion.matchedProfileCardId === targetCardFull.id) {
+        console.warn(`AI suggested matching target card ID ${targetCardFull.id} with itself. Skipping this suggestion.`);
+        continue;
+      }
+
       const matchedCardFull = allProfileCardsFromDb.find(pc => pc.id === suggestion.matchedProfileCardId);
       if (!matchedCardFull) {
         console.warn(`Suggested matched card ID ${suggestion.matchedProfileCardId} not found in fetched data.`);
@@ -160,11 +177,6 @@ const findPotentialMatchesFlow = ai.defineFlow(
 
       const existingMatch = await findExistingPotentialMatch(targetCardFull.id, matchedCardFull.id);
       if (existingMatch) {
-        // If a match record exists where both friends haven't rejected, we don't create a new one.
-        // Or if statusMatcherA/B are still pending on existing.
-        // This logic can be refined: e.g., only skip if the existing match is still 'pending' for both matchers
-        // or if it hasn't been definitively rejected by friends.
-        // For now, simple "if exists, skip" to avoid duplicate pending matches.
         if (existingMatch.statusFriendA !== 'rejected' && existingMatch.statusFriendB !== 'rejected') {
             continue;
         }
@@ -181,7 +193,7 @@ const findPotentialMatchesFlow = ai.defineFlow(
         statusMatcherB: 'pending',
         statusFriendA: 'pending',
         statusFriendB: 'pending',
-        friendEmailSent: false, // Initialize new field
+        friendEmailSent: false, 
         // createdAt will be set by addPotentialMatch
       };
 
