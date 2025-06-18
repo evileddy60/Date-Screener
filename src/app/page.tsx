@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Image from 'next/image';
-import { Sparkles, Users, HeartHandshake, BookUser } from 'lucide-react';
+import { Sparkles, Users, HeartHandshake, BookUser, DollarSign } from 'lucide-react';
 
 export default function HomePage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -68,15 +68,12 @@ export default function HomePage() {
         </Button>
       </div>
 
-      <div className="mt-16 w-full max-w-4xl">
-         <Image 
-            src="https://placehold.co/1200x400/FFACD/FAEBD7?text=Be+Your+Friend%27s+Best+Wingperson" 
-            alt="Illustration of friends connecting through a matchmaker"
-            data-ai-hint="friends connection matchmaking"
-            width={1200}
-            height={400}
-            className="rounded-xl shadow-2xl object-cover"
-          />
+      <div className="mt-16 w-full max-w-4xl p-8 bg-muted/30 rounded-xl shadow-inner text-center">
+        <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="font-headline text-xl text-muted-foreground">Future Ad Space</h3>
+        <p className="font-body text-sm text-muted-foreground/80">
+          This area is reserved for future ad integration to support Date Screener.
+        </p>
       </div>
 
       <footer className="mt-16 text-center text-sm text-muted-foreground">
