@@ -99,7 +99,6 @@ export default function DashboardPage() {
       <section>
         <h2 className="font-headline text-2xl font-semibold text-foreground mb-4">Your Matchmaking Toolkit</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <QuickLink href="/profile" icon={UserCircle} title="My Matchmaker Profile" description="View and update your personal information." />
           <QuickLink href="/profile-cards" icon={BookUser} title="Manage Profile Cards" description="Create and manage profiles for your single friends. Find matches from here." />
           <QuickLink 
             href="/potential-matches" 
