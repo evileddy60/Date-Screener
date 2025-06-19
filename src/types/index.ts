@@ -28,6 +28,7 @@ export interface UserProfile { // This is now the Matcher's profile
 }
 
 export const FRIEND_GENDER_OPTIONS = ["Man", "Woman", "Other"] as const;
+export const PREFERRED_GENDER_OPTIONS = ["Men", "Women", "Other"] as const; // Gender options someone is interested in
 
 export interface ProfileCard { // Profile of a single friend, created by a Matcher
   id: string;
@@ -44,7 +45,7 @@ export interface ProfileCard { // Profile of a single friend, created by a Match
   preferences: {
     ageRange?: string; // e.g., "25-35"
     seeking?: string[]; // Changed from string to string[]
-    gender?: string; // e.g., "Men", "Women", "Other" - Gender the friend is seeking
+    gender?: typeof PREFERRED_GENDER_OPTIONS[number] | ""; // e.g., "Men", "Women", "Other" - Gender the friend is seeking
     location?: string; // e.g., "within 50 km" - This is relative to friendPostalCode
   };
   createdAt: string; // ISO date string
@@ -76,5 +77,7 @@ export interface MatchFeedback {
   comments?: string;
   createdAt: string; // ISO date string
 }
+
+    
 
     

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { ProfileCard } from '@/types';
-import { FRIEND_GENDER_OPTIONS } from '@/types';
+import { FRIEND_GENDER_OPTIONS, PREFERRED_GENDER_OPTIONS } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,14 +19,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription as ShadCardDe
 
 
 const SEEKING_OPTIONS = ["Long-term relationship", "Companionship", "Friendship", "Casual dating", "Marriage", "Prefer not to say"];
-const PREFERRED_GENDER_OPTIONS = ["Men", "Woman", "Other"]; // Gender friend is seeking
 const MIN_AGE = 18;
 const MAX_AGE = 99;
 const MIN_PROXIMITY = 0;
 const MAX_PROXIMITY = 250; // km
 const PROXIMITY_STEP = 5; // km
 
-// Canadian Postal Code Regex: allows optional space or hyphen in the middle
 const canadianPostalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
 
 export const profileCardFormSchema = z.object({
@@ -36,7 +34,7 @@ export const profileCardFormSchema = z.object({
   friendGender: z.enum(FRIEND_GENDER_OPTIONS, { required_error: "Please select your friend's gender."}),
   friendPostalCode: z.string()
     .regex(canadianPostalCodeRegex, "Invalid Canadian Postal Code format (e.g., A1A 1A1 or M5V2T6).")
-    .transform(val => val.toUpperCase().replace(/[ -]/g, '')) // Normalize to A1A1A1 format
+    .transform(val => val.toUpperCase().replace(/[ -]/g, ''))
     .optional().or(z.literal('')),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
@@ -46,8 +44,8 @@ export const profileCardFormSchema = z.object({
       .refine(val => !val || /^\d{1,2}-\d{1,2}$/.test(val), { message: "Age range must be in 'min-max' format (e.g., '25-35') or empty."})
       .optional().or(z.literal('')),
     seeking: z.array(z.string()).optional().default([]),
-    gender: z.enum([...PREFERRED_GENDER_OPTIONS, ""] as const).optional(), // Gender friend is seeking
-    location: z.string() // This is the proximity string like "50 km"
+    gender: z.enum([...PREFERRED_GENDER_OPTIONS, ""] as const, {errorMap: () => ({ message: "Please select a preferred gender or leave blank." }) }).optional(),
+    location: z.string()
       .refine(val => !val || /^\d+ km$/.test(val), { message: "Proximity must be in 'X km' format (e.g., '50 km') or empty."})
       .optional().or(z.literal('')),
   }).optional().default({ ageRange: "", seeking: [], gender: "", location: ""}),
@@ -74,10 +72,10 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       friendName: '',
       friendEmail: '',
       friendAge: MIN_AGE,
-      friendGender: undefined,
+      friendGender: undefined, 
       friendPostalCode: '',
       bio: '',
-      interests: '', // Default to empty string for text input
+      interests: '', 
       photoUrl: '',
       preferences: {
         ageRange: `${MIN_AGE}-${MIN_AGE + 10}`,
@@ -89,64 +87,73 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
   });
 
   useEffect(() => {
-    if (initialData) {
-      const initialFriendAgeValue = initialData.friendAge || MIN_AGE;
-      const initialInterestsValue = Array.isArray(initialData.interests) ? initialData.interests.join(', ') : '';
-      const initialPreferencesValue = initialData.preferences || {}; // Ensure preferences object exists
+    let defaultValues: ProfileCardFormData = {
+      friendName: '',
+      friendEmail: '',
+      friendAge: MIN_AGE,
+      friendGender: undefined,
+      friendPostalCode: '',
+      bio: '',
+      interests: '',
+      photoUrl: '',
+      preferences: {
+        ageRange: `${MIN_AGE}-${MIN_AGE + 10}`,
+        seeking: [],
+        gender: '',
+        location: `${50} km`,
+      },
+    };
 
-      form.reset({
+    if (initialData) {
+      defaultValues = {
         friendName: initialData.friendName || '',
         friendEmail: initialData.friendEmail || '',
-        friendAge: initialFriendAgeValue,
+        friendAge: initialData.friendAge || MIN_AGE,
         friendGender: initialData.friendGender || undefined,
         friendPostalCode: initialData.friendPostalCode || '',
         bio: initialData.bio || '',
-        interests: initialInterestsValue,
+        interests: Array.isArray(initialData.interests) ? initialData.interests.join(', ') : (initialData.interests || ''),
         photoUrl: initialData.photoUrl || '',
         preferences: {
-          ageRange: initialPreferencesValue.ageRange || `${MIN_AGE}-${MIN_AGE + 10}`,
-          seeking: initialPreferencesValue.seeking || [],
-          gender: initialPreferencesValue.gender || '',
-          location: initialPreferencesValue.location || `${50} km`,
+          ageRange: initialData.preferences?.ageRange || `${MIN_AGE}-${MIN_AGE + 10}`,
+          seeking: Array.isArray(initialData.preferences?.seeking) ? initialData.preferences.seeking : [],
+          gender: initialData.preferences?.gender || '',
+          location: initialData.preferences?.location || `${50} km`,
         },
-      });
+      };
+      
+      setCurrentFriendAge(defaultValues.friendAge);
 
-      setCurrentFriendAge(initialFriendAgeValue);
-
-      const ageRangePref = initialPreferencesValue.ageRange;
-      if (ageRangePref) {
-        const [min, max] = ageRangePref.split('-').map(Number);
+      const ageRangePref = defaultValues.preferences.ageRange;
+      let parsedMinAgeSlider = MIN_AGE;
+      let parsedMaxAgeSlider = MIN_AGE + 10;
+      if (typeof ageRangePref === 'string' && /^\d{1,2}-\d{1,2}$/.test(ageRangePref)) {
+        const [minStr, maxStr] = ageRangePref.split('-');
+        const min = parseInt(minStr, 10);
+        const max = parseInt(maxStr, 10);
         if (!isNaN(min) && !isNaN(max) && min >= MIN_AGE && max <= MAX_AGE && min <= max) {
-           setCurrentAgeRange([min, max]);
-        } else {
-           setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
+           parsedMinAgeSlider = min;
+           parsedMaxAgeSlider = max;
         }
-      } else {
-        setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
       }
+      setCurrentAgeRange([parsedMinAgeSlider, parsedMaxAgeSlider]);
 
-      const locationPref = initialPreferencesValue.location;
-      if (locationPref) {
-        const prox = parseInt(locationPref.replace(' km', ''));
+      const locationPref = defaultValues.preferences.location;
+      let parsedProximitySlider = 50;
+      if (typeof locationPref === 'string' && /^\d+ km$/.test(locationPref)) {
+        const prox = parseInt(locationPref.replace(' km', ''), 10);
         if(!isNaN(prox) && prox >= MIN_PROXIMITY && prox <= MAX_PROXIMITY) {
-            setCurrentProximity(prox);
-        } else {
-            setCurrentProximity(50);
+            parsedProximitySlider = prox;
         }
-      } else {
-        setCurrentProximity(50);
       }
+      setCurrentProximity(parsedProximitySlider);
 
-    } else {
-      // Reset for create mode
-      form.reset({
-        friendName: '', friendEmail: '', friendAge: MIN_AGE, friendGender: undefined, friendPostalCode: '', bio: '', interests: '', photoUrl: '',
-        preferences: { ageRange: `${MIN_AGE}-${MIN_AGE + 10}`, seeking: [], gender: '', location: `${50} km` },
-      });
+    } else { // Create mode, ensure slider states are reset too
       setCurrentFriendAge(MIN_AGE);
       setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
       setCurrentProximity(50);
     }
+    form.reset(defaultValues);
   }, [initialData, form]);
 
   const memoizedSeekingOptions = useMemo(() => SEEKING_OPTIONS, []);
@@ -196,17 +203,19 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="font-body">Friend's Age: {currentFriendAge}</FormLabel>
-                      <Slider
-                        value={[currentFriendAge]}
-                        onValueChange={(newVal) => {
-                          setCurrentFriendAge(newVal[0]);
-                          field.onChange(newVal[0]);
-                        }}
-                        min={MIN_AGE}
-                        max={MAX_AGE}
-                        step={1}
-                        className="py-2"
-                      />
+                      <FormControl>
+                        <Slider
+                            value={[currentFriendAge]}
+                            onValueChange={(newVal) => {
+                            setCurrentFriendAge(newVal[0]);
+                            field.onChange(newVal[0]);
+                            }}
+                            min={MIN_AGE}
+                            max={MAX_AGE}
+                            step={1}
+                            className="py-2"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -292,17 +301,19 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel className="font-body">Preferred Age Range for Matches: {currentAgeRange[0]} - {currentAgeRange[1]}</FormLabel>
-                    <Slider
-                        value={currentAgeRange}
-                        onValueChange={(newVal) => {
-                        setCurrentAgeRange(newVal);
-                        field.onChange(`${newVal[0]}-${newVal[1]}`);
-                        }}
-                        min={MIN_AGE}
-                        max={MAX_AGE}
-                        step={1}
-                        className="py-2"
-                    />
+                     <FormControl>
+                        <Slider
+                            value={currentAgeRange}
+                            onValueChange={(newVal) => {
+                            setCurrentAgeRange(newVal as [number, number]);
+                            field.onChange(`${newVal[0]}-${newVal[1]}`);
+                            }}
+                            min={MIN_AGE}
+                            max={MAX_AGE}
+                            step={1}
+                            className="py-2"
+                        />
+                    </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
@@ -379,21 +390,23 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
 
                 <FormField
                 control={form.control}
-                name="preferences.location" // This field now stores "X km"
+                name="preferences.location" 
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel className="font-body">Preferred Proximity from their Postal Code: {currentProximity} km</FormLabel>
-                    <Slider
-                        value={[currentProximity]}
-                        onValueChange={(newVal) => {
-                            setCurrentProximity(newVal[0]);
-                            field.onChange(`${newVal[0]} km`);
-                        }}
-                        min={MIN_PROXIMITY}
-                        max={MAX_PROXIMITY}
-                        step={PROXIMITY_STEP}
-                        className="py-2"
-                    />
+                     <FormControl>
+                        <Slider
+                            value={[currentProximity]}
+                            onValueChange={(newVal) => {
+                                setCurrentProximity(newVal[0]);
+                                field.onChange(`${newVal[0]} km`);
+                            }}
+                            min={MIN_PROXIMITY}
+                            max={MAX_PROXIMITY}
+                            step={PROXIMITY_STEP}
+                            className="py-2"
+                        />
+                    </FormControl>
                      <FormDescription className="font-body text-xs">How far from their postal code they're willing to match.</FormDescription>
                     <FormMessage />
                     </FormItem>
@@ -415,3 +428,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     </Card>
   );
 }
+
+    
+
+    

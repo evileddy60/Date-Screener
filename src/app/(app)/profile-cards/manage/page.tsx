@@ -23,7 +23,7 @@ function ManageProfileCardContent() {
   const mode = cardIdToEdit ? 'edit' : 'create';
 
   const [initialCardData, setInitialCardData] = useState<ProfileCard | null>(null);
-  const [isLoading, setIsLoading] = useState(mode === 'edit'); // Only load if editing
+  const [isLoading, setIsLoading] = useState(mode === 'edit'); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,23 +42,26 @@ function ManageProfileCardContent() {
             }
           } else {
             setError("Profile card not found.");
+            setInitialCardData(null);
           }
         } catch (err: any) {
           console.error("Error fetching card to edit:", err);
           setError(err.message || "Could not load profile card data.");
+          setInitialCardData(null);
         } finally {
           setIsLoading(false);
         }
       } else if (mode === 'create') {
         setIsLoading(false);
+        setInitialCardData(null); // Ensure null for create mode
       }
     }
-    if (currentUser) { // Ensure currentUser is available before fetching
+    if (currentUser) { 
         fetchCardToEdit();
-    } else if (!currentUser && !isLoading) { // If auth is done loading and no user
-        router.push('/auth/login'); // Or some other appropriate redirect
+    } else if (!currentUser && !isLoading) { 
+        router.push('/auth/login'); 
     }
-  }, [cardIdToEdit, mode, currentUser, router, isLoading]);
+  }, [cardIdToEdit, mode, currentUser, router]); // Removed isLoading from deps
 
   const handleFormSubmit = async (formData: ProfileCardFormData) => {
     if (!currentUser || !currentUser.id || !currentUser.name) {
@@ -71,8 +74,11 @@ function ManageProfileCardContent() {
     const dataToSave: Omit<ProfileCard, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'> = {
         friendName: formData.friendName,
         friendEmail: formData.friendEmail,
+        friendAge: formData.friendAge,
+        friendGender: formData.friendGender,
+        friendPostalCode: formData.friendPostalCode,
         bio: formData.bio,
-        interests: formData.interests, // Already an array from Zod transform
+        interests: formData.interests, 
         photoUrl: formData.photoUrl,
         preferences: {
             ageRange: formData.preferences?.ageRange,
@@ -87,9 +93,9 @@ function ManageProfileCardContent() {
         const cardToUpdate: ProfileCard = {
           ...dataToSave,
           id: initialCardData.id,
-          createdByMatcherId: currentUser.id, // Should already match, but good to ensure
+          createdByMatcherId: currentUser.id, 
           matcherName: currentUser.name, 
-          createdAt: initialCardData.createdAt, // Preserve original creation date
+          createdAt: initialCardData.createdAt, 
         };
         await updateProfileCard(cardToUpdate);
         toast({ title: 'Profile Card Updated!', description: `${cardToUpdate.friendName}'s profile has been successfully updated.` });
@@ -177,3 +183,4 @@ export default function ManageProfileCardPage() {
     );
 }
 
+    
