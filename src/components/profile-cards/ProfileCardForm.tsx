@@ -56,7 +56,7 @@ export const profileCardFormSchema = z.object({
 export type ProfileCardFormData = z.infer<typeof profileCardFormSchema>;
 
 interface ProfileCardFormProps {
-  initialData?: ProfileCard | null; 
+  initialData?: ProfileCard | null;
   onSubmit: (data: ProfileCardFormData) => Promise<void>;
   onCancel: () => void;
   mode: 'create' | 'edit';
@@ -74,15 +74,15 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       friendName: '',
       friendEmail: '',
       friendAge: MIN_AGE,
-      friendGender: undefined, 
+      friendGender: undefined,
       friendPostalCode: '',
       bio: '',
-      interests: [], 
+      interests: '', // Default to empty string for text input
       photoUrl: '',
       preferences: {
         ageRange: `${MIN_AGE}-${MIN_AGE + 10}`,
         seeking: [],
-        gender: '', 
+        gender: '',
         location: `${50} km`,
       },
     },
@@ -90,37 +90,55 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
 
   useEffect(() => {
     if (initialData) {
-      const initialFriendAge = initialData.friendAge || MIN_AGE;
+      const initialFriendAgeValue = initialData.friendAge || MIN_AGE;
+      const initialInterestsValue = Array.isArray(initialData.interests) ? initialData.interests.join(', ') : '';
+      const initialPreferencesValue = initialData.preferences || {}; // Ensure preferences object exists
+
       form.reset({
-        friendName: initialData.friendName,
+        friendName: initialData.friendName || '',
         friendEmail: initialData.friendEmail || '',
-        friendAge: initialFriendAge,
+        friendAge: initialFriendAgeValue,
         friendGender: initialData.friendGender || undefined,
         friendPostalCode: initialData.friendPostalCode || '',
-        bio: initialData.bio,
-        interests: initialData.interests.join(', '), 
+        bio: initialData.bio || '',
+        interests: initialInterestsValue,
         photoUrl: initialData.photoUrl || '',
         preferences: {
-          ageRange: initialData.preferences?.ageRange || `${MIN_AGE}-${MIN_AGE+10}`,
-          seeking: initialData.preferences?.seeking || [],
-          gender: initialData.preferences?.gender || '', 
-          location: initialData.preferences?.location || `${50} km`,
+          ageRange: initialPreferencesValue.ageRange || `${MIN_AGE}-${MIN_AGE + 10}`,
+          seeking: initialPreferencesValue.seeking || [],
+          gender: initialPreferencesValue.gender || '',
+          location: initialPreferencesValue.location || `${50} km`,
         },
       });
-      setCurrentFriendAge(initialFriendAge);
-      if (initialData.preferences?.ageRange) {
-        const [min, max] = initialData.preferences.ageRange.split('-').map(Number);
-        if (!isNaN(min) && !isNaN(max) && min >= MIN_AGE && max <= MAX_AGE && min <=max) {
+
+      setCurrentFriendAge(initialFriendAgeValue);
+
+      const ageRangePref = initialPreferencesValue.ageRange;
+      if (ageRangePref) {
+        const [min, max] = ageRangePref.split('-').map(Number);
+        if (!isNaN(min) && !isNaN(max) && min >= MIN_AGE && max <= MAX_AGE && min <= max) {
            setCurrentAgeRange([min, max]);
+        } else {
+           setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
         }
+      } else {
+        setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
       }
-      if (initialData.preferences?.location) {
-        const prox = parseInt(initialData.preferences.location.replace(' km', ''));
+
+      const locationPref = initialPreferencesValue.location;
+      if (locationPref) {
+        const prox = parseInt(locationPref.replace(' km', ''));
         if(!isNaN(prox) && prox >= MIN_PROXIMITY && prox <= MAX_PROXIMITY) {
             setCurrentProximity(prox);
+        } else {
+            setCurrentProximity(50);
         }
+      } else {
+        setCurrentProximity(50);
       }
+
     } else {
+      // Reset for create mode
       form.reset({
         friendName: '', friendEmail: '', friendAge: MIN_AGE, friendGender: undefined, friendPostalCode: '', bio: '', interests: '', photoUrl: '',
         preferences: { ageRange: `${MIN_AGE}-${MIN_AGE + 10}`, seeking: [], gender: '', location: `${50} km` },
@@ -267,18 +285,18 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 />
 
                 <h3 className="font-headline text-xl text-primary pt-4 border-t mt-6">Matching Preferences (Optional)</h3>
-                
+
                 <FormField
                 control={form.control}
                 name="preferences.ageRange"
-                render={({ field }) => ( 
+                render={({ field }) => (
                     <FormItem>
                     <FormLabel className="font-body">Preferred Age Range for Matches: {currentAgeRange[0]} - {currentAgeRange[1]}</FormLabel>
                     <Slider
                         value={currentAgeRange}
                         onValueChange={(newVal) => {
                         setCurrentAgeRange(newVal);
-                        field.onChange(`${newVal[0]}-${newVal[1]}`); 
+                        field.onChange(`${newVal[0]}-${newVal[1]}`);
                         }}
                         min={MIN_AGE}
                         max={MAX_AGE}
@@ -331,10 +349,10 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                     </FormItem>
                 )}
                 />
-                
+
                 <FormField
                 control={form.control}
-                name="preferences.gender" 
+                name="preferences.gender"
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel className="font-body">Interested In (Gender for Matches)</FormLabel>
@@ -342,10 +360,10 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         <RadioGroup
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        className="flex flex-row space-x-4 items-center pt-1" 
+                        className="flex flex-row space-x-4 items-center pt-1"
                         >
-                        {memoizedPreferredGenderOptions.map((option) => ( 
-                            <FormItem key={option} className="flex items-center space-x-2 space-y-0"> 
+                        {memoizedPreferredGenderOptions.map((option) => (
+                            <FormItem key={option} className="flex items-center space-x-2 space-y-0">
                             <FormControl>
                                 <RadioGroupItem value={option} />
                             </FormControl>
@@ -362,14 +380,14 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 <FormField
                 control={form.control}
                 name="preferences.location" // This field now stores "X km"
-                render={({ field }) => ( 
+                render={({ field }) => (
                     <FormItem>
                     <FormLabel className="font-body">Preferred Proximity from their Postal Code: {currentProximity} km</FormLabel>
                     <Slider
-                        value={[currentProximity]} 
+                        value={[currentProximity]}
                         onValueChange={(newVal) => {
                             setCurrentProximity(newVal[0]);
-                            field.onChange(`${newVal[0]} km`); 
+                            field.onChange(`${newVal[0]} km`);
                         }}
                         min={MIN_PROXIMITY}
                         max={MAX_PROXIMITY}
@@ -397,7 +415,3 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     </Card>
   );
 }
-
-    
-
-    
