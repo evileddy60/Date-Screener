@@ -5,25 +5,26 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { UserCircle, BookUser, ShieldCheck, ArrowRight, Users, Bell, PartyPopper, Globe, Shuffle, Info } from 'lucide-react'; 
+import { UserCircle, BookUser, ShieldCheck, ArrowRight, Users, Bell, PartyPopper, Globe, Shuffle, Info } from 'lucide-react';
 import { USER_ROLES } from '@/lib/constants';
 import { useEffect, useState } from 'react';
 import type { PotentialMatch, ProfileCard } from '@/types';
 import { getPotentialMatchesByMatcher, getProfileCardsByMatcher, getAllProfileCards } from '@/lib/firestoreService';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils'; // Added import for cn
 
 const StatDisplayCard = ({ icon: Icon, title, value, description, isLoading, highlight }: { icon: React.ElementType, title: string, value: number | string, description: string, isLoading?: boolean, highlight?: boolean }) => (
-  <Card className={cn("transition-all duration-300", highlight && value > 0 ? "border-primary shadow-primary/20" : "")}>
+  <Card className={cn("transition-all duration-300", highlight && Number(value) > 0 ? "border-primary shadow-primary/20" : "")}>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className={cn("text-sm font-medium", highlight && value > 0 ? "text-primary" : "")}>{title}</CardTitle>
-      <Icon className={cn("h-5 w-5", highlight && value > 0 ? "text-primary" : "text-muted-foreground")} />
+      <CardTitle className={cn("text-sm font-medium", highlight && Number(value) > 0 ? "text-primary" : "")}>{title}</CardTitle>
+      <Icon className={cn("h-5 w-5", highlight && Number(value) > 0 ? "text-primary" : "text-muted-foreground")} />
     </CardHeader>
     <CardContent>
       {isLoading ? (
         <Skeleton className="h-8 w-1/2 rounded-md" />
       ) : (
-        <div className={cn("text-2xl font-bold", highlight && value > 0 ? "text-primary" : "")}>{value}</div>
+        <div className={cn("text-2xl font-bold", highlight && Number(value) > 0 ? "text-primary" : "")}>{value}</div>
       )}
       <p className="text-xs text-muted-foreground">{description}</p>
     </CardContent>
@@ -232,4 +233,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
