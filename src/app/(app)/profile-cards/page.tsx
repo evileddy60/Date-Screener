@@ -3,11 +3,11 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProfileCardsByMatcher, addProfileCard, updateProfileCard, deleteProfileCard } from '@/lib/firestoreService';
+import { getProfileCardsByMatcher, deleteProfileCard } from '@/lib/firestoreService'; // Removed addProfileCard, updateProfileCard
 import type { ProfileCard as ProfileCardType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ProfileCardDisplay } from '@/components/profile-cards/ProfileCardDisplay';
-import { CreateEditProfileCardModal } from '@/components/profile-cards/CreateEditProfileCardModal';
+// Removed CreateEditProfileCardModal import
 import { Loader2, PlusCircle, UserX, BookOpen, Trash2, AlertTriangleIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,8 +33,7 @@ export default function ProfileCardsPage() {
   const { toast } = useToast();
   const [myProfileCards, setMyProfileCards] = useState<ProfileCardType[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProfileCard, setEditingProfileCard] = useState<ProfileCardType | null>(null);
+  // Removed modal state: isModalOpen, editingProfileCard
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [cardToDeleteId, setCardToDeleteId] = useState<string | null>(null);
@@ -65,7 +64,7 @@ export default function ProfileCardsPage() {
     fetchCards();
   }, [currentUser, authLoading, router, toast]);
 
-  const handleOpenCreateModal = () => {
+  const handleNavigateToCreate = () => {
     if (myProfileCards.length >= MAX_PROFILE_CARDS_LIMIT) {
       toast({
         variant: "destructive",
@@ -74,76 +73,13 @@ export default function ProfileCardsPage() {
       });
       return;
     }
-    setEditingProfileCard(null);
-    setIsModalOpen(true);
+    router.push('/profile-cards/manage');
   };
 
-  const handleOpenEditModal = (profileCard: ProfileCardType) => {
-    setEditingProfileCard(profileCard);
-    setIsModalOpen(true);
+  const handleNavigateToEdit = (profileCardId: string) => {
+    router.push(`/profile-cards/manage?edit=${profileCardId}`);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingProfileCard(null);
-  };
-
-  const handleProfileCardSaved = async (savedCardData: Omit<ProfileCardType, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'>, existingCardId?: string) => {
-    if (!currentUser || !currentUser.id || !currentUser.name) {
-      console.error("Cannot save profile card: current user data is incomplete or missing.", currentUser);
-      toast({variant: "destructive", title: "Save Failed", description: "Your user data is incomplete. Please try logging out and back in."});
-      handleCloseModal();
-      return;
-    }
-
-    if (!existingCardId && myProfileCards.length >= MAX_PROFILE_CARDS_LIMIT) {
-      toast({
-        variant: "destructive",
-        title: "Profile Card Limit Reached",
-        description: `Cannot save new card. You have reached the limit of ${MAX_PROFILE_CARDS_LIMIT} profile cards.`,
-      });
-      handleCloseModal();
-      return;
-    }
-
-    try {
-      if (existingCardId) {
-        const originalCard = myProfileCards.find(c => c.id === existingCardId);
-        if (!originalCard) {
-            console.error("Original card not found for update");
-            toast({variant: "destructive", title: "Save Failed", description: "Original card data missing for update."})
-            return;
-        }
-        const cardToUpdate: ProfileCardType = {
-          ...savedCardData,
-          id: existingCardId,
-          createdByMatcherId: currentUser.id,
-          matcherName: currentUser.name,
-          createdAt: originalCard.createdAt,
-        };
-        await updateProfileCard(cardToUpdate);
-        setMyProfileCards(prevCards =>
-            prevCards
-                .map(card => (card.id === existingCardId ? cardToUpdate : card))
-                .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        );
-        toast({ title: "Profile Card Updated!", description: `${cardToUpdate.friendName}'s profile has been successfully updated.` });
-
-      } else {
-        const newCard = await addProfileCard(savedCardData, currentUser.id, currentUser.name);
-        setMyProfileCards(prevCards =>
-            [newCard, ...prevCards]
-                .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        );
-        toast({ title: "Profile Card Created!", description: `${newCard.friendName}'s profile has been successfully created.` });
-      }
-    } catch (error: any) {
-      console.error("Error saving profile card:", error);
-      toast({variant: "destructive", title: "Save Failed", description: `Could not save profile card: ${error.message}`})
-    } finally {
-      handleCloseModal();
-    }
-  };
 
   const handleFindMatch = (profileCardId: string) => {
     router.push(`/find-matches?cardId=${profileCardId}`);
@@ -207,7 +143,7 @@ export default function ProfileCardsPage() {
              <p className="font-body text-muted-foreground">You have created {myProfileCards.length} of {MAX_PROFILE_CARDS_LIMIT} allowed profile cards.</p>
         </div>
         <Button
-          onClick={handleOpenCreateModal}
+          onClick={handleNavigateToCreate} // Changed handler
           className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md"
           disabled={!canCreateMoreCards}
           title={!canCreateMoreCards ? `You have reached the limit of ${MAX_PROFILE_CARDS_LIMIT} profile cards.` : "Create a new profile card for a friend"}
@@ -247,7 +183,7 @@ export default function ProfileCardsPage() {
             <ProfileCardDisplay
                 key={card.id}
                 profileCard={card}
-                onEdit={() => handleOpenEditModal(card)}
+                onEdit={() => handleNavigateToEdit(card.id)} // Changed handler
                 onFindMatch={() => handleFindMatch(card.id)}
                 onDeleteRequest={() => handleOpenDeleteDialog(card.id)}
             />
@@ -255,14 +191,7 @@ export default function ProfileCardsPage() {
         </div>
       )}
 
-      {isModalOpen && (
-        <CreateEditProfileCardModal
-            isOpen={isModalOpen}
-            onClose={handleCloseModal}
-            profileCard={editingProfileCard}
-            onSave={(data, id) => handleProfileCardSaved(data, id)}
-        />
-      )}
+      {/* Removed CreateEditProfileCardModal component instance */}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
