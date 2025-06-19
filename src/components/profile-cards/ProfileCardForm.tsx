@@ -19,8 +19,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription as ShadCardDe
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { storage } from '@/lib/firebase'; // Import Firebase storage instance
-import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage'; // Firebase storage functions
+import { storage } from '@/lib/firebase';
+import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 
 const SEEKING_OPTIONS = ["Long-term relationship", "Companionship", "Friendship", "Casual dating", "Marriage", "Prefer not to say"];
 const MIN_AGE = 18;
@@ -44,7 +44,7 @@ export const profileCardFormSchema = z.object({
     .optional().or(z.literal('')),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
-  photoUrl: z.string().optional().or(z.literal('')), // Will store Firebase Storage URL or existing URL
+  photoUrl: z.string().optional().or(z.literal('')),
   preferences: z.object({
     ageRange: z.string()
       .refine(val => !val || /^\d{1,2}-\d{1,2}$/.test(val), { message: "Age range must be in 'min-max' format (e.g., '25-35') or empty."})
@@ -75,11 +75,10 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false); // New state for image upload
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   
   const { currentUser } = useAuth();
   const { toast } = useToast();
-
 
   const form = useForm<ProfileCardFormData>({
     resolver: zodResolver(profileCardFormSchema),
@@ -102,10 +101,8 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
   });
 
   const { reset, setValue, watch, setError: setFormError, clearErrors: clearFormErrors } = form;
-  const watchedPhotoUrl = watch('photoUrl'); // This is the URL that will be saved
 
   useEffect(() => {
-    // This effect is for initializing the form with initialData
     let newDefaultValues: ProfileCardFormData;
 
     if (initialData && mode === 'edit') {
@@ -127,12 +124,8 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       };
       
       setCurrentFriendAge(newDefaultValues.friendAge);
-      if (newDefaultValues.photoUrl) {
-        setImagePreview(newDefaultValues.photoUrl); // Display existing Firebase Storage URL
-      } else {
-        setImagePreview(null);
-      }
-      setSelectedImageFile(null); // No new file selected initially on edit
+      setImagePreview(initialData.photoUrl || null);
+      setSelectedImageFile(null);
       setFileName(null);
 
       const ageRangePref = newDefaultValues.preferences.ageRange;
@@ -204,20 +197,22 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
 
       clearFormErrors("photoUrl");
       setSelectedImageFile(file);
-      setImagePreview(URL.createObjectURL(file)); // Create a temporary URL for preview
+      setImagePreview(URL.createObjectURL(file));
       setFileName(file.name);
-      setValue('photoUrl', 'new_image_selected', { shouldDirty: true }); // Mark form dirty, actual URL set on submit
+      // Use a unique placeholder based on file info to ensure RHF detects change for `isDirty`
+      setValue('photoUrl', `placeholder_for_new_file_${file.name}_${file.lastModified}`, { shouldDirty: true });
     }
   };
 
   const handleRemoveImage = () => {
     if (imagePreview && imagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(imagePreview); // Revoke temporary blob URL
+      URL.revokeObjectURL(imagePreview);
     }
     setImagePreview(null);
     setSelectedImageFile(null);
     setFileName(null);
-    setValue('photoUrl', '', { shouldDirty: true, shouldValidate: true }); // Clear the photoUrl field
+    setValue('photoUrl', '', { shouldDirty: true, shouldValidate: true });
+    // Reset the native file input's value
     const fileInput = document.getElementById('photoUrlInput') as HTMLInputElement | null;
     if (fileInput) {
         fileInput.value = ''; 
@@ -229,19 +224,17 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         toast({ variant: "destructive", title: "Error", description: "User not authenticated or storage service unavailable." });
         return;
     }
-    setIsUploadingImage(true); // Indicate overall submission process including potential upload
+    setIsUploadingImage(true);
 
-    let finalPhotoUrl = initialData?.photoUrl || ''; // Start with existing URL or empty
+    let finalPhotoUrl = initialData?.photoUrl || '';
 
-    if (selectedImageFile) { // User selected a new image
+    if (selectedImageFile) {
         try {
-            // Delete old image if it exists and a new one is being uploaded
             if (mode === 'edit' && initialData?.photoUrl && initialData.photoUrl.includes('firebasestorage.googleapis.com')) {
                 try {
                     const oldImageRef = storageRef(storage, initialData.photoUrl);
                     await deleteObject(oldImageRef);
                 } catch (deleteError: any) {
-                     // Non-critical, log and continue. Maybe the old URL was invalid or permissions changed.
                     console.warn("Could not delete old image from Firebase Storage:", deleteError);
                 }
             }
@@ -254,13 +247,12 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
             console.error('Error uploading image to Firebase Storage:', uploadError);
             toast({ variant: 'destructive', title: 'Image Upload Failed', description: uploadError.message || 'Could not upload the image.' });
             setIsUploadingImage(false);
-            return; // Stop submission if image upload fails
+            return;
         }
-    } else if (watchedPhotoUrl === '' && initialData?.photoUrl) {
-        // Image was explicitly removed by the user
+    } else if (formData.photoUrl === '' && initialData?.photoUrl && initialData.photoUrl.includes('firebasestorage.googleapis.com')) {
+        // Image was explicitly removed by the user, and there was an old image in storage
         finalPhotoUrl = '';
-        // Optionally, delete the old image from Firebase Storage if it was a Firebase Storage URL
-        if (mode === 'edit' && initialData?.photoUrl && initialData.photoUrl.includes('firebasestorage.googleapis.com')) {
+        if (mode === 'edit') { // Only delete if editing an existing card
             try {
                 const oldImageRef = storageRef(storage, initialData.photoUrl);
                 await deleteObject(oldImageRef);
@@ -269,15 +261,14 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
             }
         }
     }
-    // If no new file and not removed, finalPhotoUrl remains initialData.photoUrl (already set)
-
+    
     const dataToSubmit: ProfileCardFormData = {
         ...formData,
         photoUrl: finalPhotoUrl,
     };
     
-    await onSubmit(dataToSubmit); // Call the parent onSubmit
-    setIsUploadingImage(false); // Reset after successful submission via parent
+    await onSubmit(dataToSubmit);
+    setIsUploadingImage(false);
   };
 
   const combinedIsSubmitting = parentIsSubmitting || isUploadingImage;
@@ -579,3 +570,4 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     </Card>
   );
 }
+
