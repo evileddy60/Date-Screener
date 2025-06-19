@@ -194,10 +194,10 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                             <RadioGroup
                             onValueChange={field.onChange}
                             defaultValue={field.value}
-                            className="flex flex-col space-y-1"
+                            className="flex flex-row space-x-4 items-center pt-1" // Updated class for horizontal layout
                             >
                             {memoizedFriendGenderOptions.map((option) => (
-                                <FormItem key={option} className="flex items-center space-x-3 space-y-0">
+                                <FormItem key={option} className="flex items-center space-x-2 space-y-0"> {/* Adjusted space-x for tighter button+label */}
                                 <FormControl>
                                     <RadioGroupItem value={option} />
                                 </FormControl>
@@ -321,10 +321,10 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         <RadioGroup
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        className="flex flex-col space-y-1"
+                        className="flex flex-row space-x-4 items-center pt-1" // Updated class for horizontal layout
                         >
                         {memoizedPreferredGenderOptions.map((option) => ( 
-                            <FormItem key={option} className="flex items-center space-x-3 space-y-0">
+                            <FormItem key={option} className="flex items-center space-x-2 space-y-0"> {/* Adjusted space-x for tighter button+label */}
                             <FormControl>
                                 <RadioGroupItem value={option} />
                             </FormControl>
@@ -375,5 +375,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     </Card>
   );
 }
+
+    
 
     
