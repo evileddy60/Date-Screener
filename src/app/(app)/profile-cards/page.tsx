@@ -52,9 +52,9 @@ export default function ProfileCardsPage() {
         try {
           const cards = await getProfileCardsByMatcher(currentUser.id);
           setMyProfileCards(cards.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error fetching profile cards:", error);
-          toast({ variant: "destructive", title: "Load Failed", description: "Could not fetch profile cards." });
+          toast({ variant: "destructive", title: "Load Failed", description: `Could not fetch profile cards: ${error.message}` });
         } finally {
           setIsLoadingData(false);
         }
@@ -87,9 +87,14 @@ export default function ProfileCardsPage() {
     setIsModalOpen(false);
     setEditingProfileCard(null);
   };
-  
+
   const handleProfileCardSaved = async (savedCardData: Omit<ProfileCardType, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'>, existingCardId?: string) => {
-    if (!currentUser) return;
+    if (!currentUser || !currentUser.id || !currentUser.name) {
+      console.error("Cannot save profile card: current user data is incomplete or missing.", currentUser);
+      toast({variant: "destructive", title: "Save Failed", description: "Your user data is incomplete. Please try logging out and back in."});
+      handleCloseModal();
+      return;
+    }
 
     if (!existingCardId && myProfileCards.length >= MAX_PROFILE_CARDS_LIMIT) {
       toast({
@@ -112,12 +117,12 @@ export default function ProfileCardsPage() {
         const cardToUpdate: ProfileCardType = {
           ...savedCardData,
           id: existingCardId,
-          createdByMatcherId: currentUser.id, 
-          matcherName: currentUser.name, 
-          createdAt: originalCard.createdAt, 
+          createdByMatcherId: currentUser.id,
+          matcherName: currentUser.name,
+          createdAt: originalCard.createdAt,
         };
         await updateProfileCard(cardToUpdate);
-        setMyProfileCards(prevCards => 
+        setMyProfileCards(prevCards =>
             prevCards
                 .map(card => (card.id === existingCardId ? cardToUpdate : card))
                 .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -126,15 +131,15 @@ export default function ProfileCardsPage() {
 
       } else {
         const newCard = await addProfileCard(savedCardData, currentUser.id, currentUser.name);
-        setMyProfileCards(prevCards => 
+        setMyProfileCards(prevCards =>
             [newCard, ...prevCards]
                 .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         );
         toast({ title: "Profile Card Created!", description: `${newCard.friendName}'s profile has been successfully created.` });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving profile card:", error);
-      toast({variant: "destructive", title: "Save Failed", description: "Could not save profile card."})
+      toast({variant: "destructive", title: "Save Failed", description: `Could not save profile card: ${error.message}`})
     } finally {
       handleCloseModal();
     }
@@ -159,9 +164,9 @@ export default function ProfileCardsPage() {
         await deleteProfileCard(cardToDeleteId);
         setMyProfileCards(prevCards => prevCards.filter(card => card.id !== cardToDeleteId));
         toast({ title: "Profile Card Deleted", description: `${cardToDeleteName || 'The card'}'s profile has been successfully deleted.` });
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error deleting profile card:", error);
-        toast({ variant: "destructive", title: "Deletion Failed", description: `Could not delete ${cardToDeleteName || 'the card'}.` });
+        toast({ variant: "destructive", title: "Deletion Failed", description: `Could not delete ${cardToDeleteName || 'the card'}: ${error.message}` });
       } finally {
         setIsDeleteDialogOpen(false);
         setCardToDeleteId(null);
@@ -201,8 +206,8 @@ export default function ProfileCardsPage() {
             <h1 className="font-headline text-4xl font-semibold text-primary">My Profile Cards</h1>
              <p className="font-body text-muted-foreground">You have created {myProfileCards.length} of {MAX_PROFILE_CARDS_LIMIT} allowed profile cards.</p>
         </div>
-        <Button 
-          onClick={handleOpenCreateModal} 
+        <Button
+          onClick={handleOpenCreateModal}
           className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md"
           disabled={!canCreateMoreCards}
           title={!canCreateMoreCards ? `You have reached the limit of ${MAX_PROFILE_CARDS_LIMIT} profile cards.` : "Create a new profile card for a friend"}
@@ -239,9 +244,9 @@ export default function ProfileCardsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {myProfileCards.map(card => (
-            <ProfileCardDisplay 
-                key={card.id} 
-                profileCard={card} 
+            <ProfileCardDisplay
+                key={card.id}
+                profileCard={card}
                 onEdit={() => handleOpenEditModal(card)}
                 onFindMatch={() => handleFindMatch(card.id)}
                 onDeleteRequest={() => handleOpenDeleteDialog(card.id)}
