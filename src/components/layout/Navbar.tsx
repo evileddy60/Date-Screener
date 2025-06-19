@@ -18,59 +18,104 @@ export function Navbar() {
     cn(
       "flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors",
       pathname === path ? "text-primary" : "text-foreground/80",
-      isSheetLink && "py-2 px-3 rounded-md text-base w-full justify-start hover:bg-muted" // Added styles for sheet links
+      isSheetLink && "py-2 px-3 rounded-md text-base w-full justify-start hover:bg-muted"
     );
+
+  const renderLink = (href: string, icon: React.ElementType, text: string, isSheet: boolean) => {
+    const IconComponent = icon;
+    const linkContent = (
+      <>
+        <IconComponent className={cn("h-4 w-4", isSheet && "h-5 w-5")} /> {text}
+      </>
+    );
+
+    if (isSheet) {
+      return (
+        <SheetClose asChild>
+          <Link href={href} className={navLinkClass(href, isSheet)}>
+            {linkContent}
+          </Link>
+        </SheetClose>
+      );
+    }
+    return (
+      <Link href={href} className={navLinkClass(href, isSheet)}>
+        {linkContent}
+      </Link>
+    );
+  };
+  
+  const renderButtonLink = (href: string, icon: React.ElementType, text: string, isSheet: boolean, variant: "default" | "ghost" = "default", size: "sm" | "default" = "sm") => {
+    const IconComponent = icon;
+    const buttonContent = (
+      <>
+        <IconComponent className={cn("mr-2 h-4 w-4", isSheet && "h-5 w-5")} /> {text}
+      </>
+    );
+
+    if (isSheet) {
+      return (
+        <SheetClose asChild>
+          <Link href={href} className={navLinkClass(href, isSheet)}>
+             {buttonContent}
+          </Link>
+        </SheetClose>
+      );
+    }
+    return (
+      <Button asChild variant={variant} size={size}>
+        <Link href={href} className={navLinkClass(href, false)}> {/* isSheet is false here as it's a button */}
+            {buttonContent}
+        </Link>
+      </Button>
+    );
+  };
+  
+  const renderLogoutButton = (isSheet: boolean) => {
+    const buttonContent = (
+      <>
+        <LogOut className={cn("mr-2 h-4 w-4", isSheet && "h-5 w-5")} /> Logout: {currentUser?.name}
+      </>
+    );
+    if (isSheet) {
+      return (
+        <SheetClose asChild>
+          <Button variant="ghost" size="sm" onClick={logoutUser} className={cn("text-foreground/80 hover:text-primary w-full justify-start text-base py-2 px-3 h-auto", navLinkClass('', true))}>
+            {buttonContent}
+          </Button>
+        </SheetClose>
+      );
+    }
+    return (
+       <Button variant="ghost" size="sm" onClick={logoutUser} className={cn("text-foreground/80 hover:text-primary", navLinkClass('', false))}>
+         {buttonContent}
+       </Button>
+    );
+  };
+
 
   const commonNavLinks = (isSheet: boolean) => (
     <>
-      <SheetClose asChild={isSheet}>
-        <Link href="/dashboard" className={navLinkClass("/dashboard", isSheet)}>
-          <Home className="h-5 w-5" /> Dashboard
-        </Link>
-      </SheetClose>
-      <SheetClose asChild={isSheet}>
-        <Link href="/profile-cards" className={navLinkClass("/profile-cards", isSheet)}>
-          <BookUser className="h-5 w-5" /> Profile Cards
-        </Link>
-      </SheetClose>
-      <SheetClose asChild={isSheet}>
-        <Link href="/potential-matches" className={navLinkClass("/potential-matches", isSheet)}>
-          <Users className="h-5 w-5" /> Review Matches
-        </Link>
-      </SheetClose>
-      <SheetClose asChild={isSheet}>
-        <Link href="/profile" className={navLinkClass("/profile", isSheet)}>
-          <UserCircle className="h-5 w-5" /> My Profile & Settings
-        </Link>
-      </SheetClose>
-      <SheetClose asChild={isSheet}>
-        <Button variant="ghost" size="sm" onClick={logoutUser} className={cn("text-foreground/80 hover:text-primary", isSheet && "w-full justify-start text-base py-2 px-3 h-auto")}>
-          <LogOut className={cn("mr-2 h-4 w-4", isSheet && "h-5 w-5")} /> Logout: {currentUser?.name}
-        </Button>
-      </SheetClose>
+      {renderLink("/dashboard", Home, "Dashboard", isSheet)}
+      {renderLink("/profile-cards", BookUser, "Profile Cards", isSheet)}
+      {renderLink("/potential-matches", Users, "Review Matches", isSheet)}
+      {renderLink("/profile", UserCircle, "My Profile & Settings", isSheet)}
+      {renderLogoutButton(isSheet)}
     </>
   );
 
   const unauthenticatedNavLinks = (isSheet: boolean) => (
     <>
-      <SheetClose asChild={isSheet}>
-        <Link href="/auth/login" className={navLinkClass("/auth/login", isSheet)}>
-          <LogIn className={cn("mr-2 h-4 w-4", isSheet && "h-5 w-5")} /> Login
-        </Link>
-      </SheetClose>
-      <SheetClose asChild={isSheet}>
-        <Link href="/auth/signup" className={navLinkClass("/auth/signup", isSheet)}>
-           {isSheet ? (
-            <>
-              <UserPlus className={cn("mr-2 h-4 w-4", isSheet && "h-5 w-5")} /> Sign Up
-            </>
-           ) : (
-            <Button variant="default" size="sm">
+      {renderLink("/auth/login", LogIn, "Login", isSheet)}
+      {isSheet ? (
+         renderLink("/auth/signup", UserPlus, "Sign Up", isSheet)
+      ) : (
+        <Button asChild variant="default" size="sm">
+            <Link href="/auth/signup" className={navLinkClass("/auth/signup", false)}>
                 <UserPlus className="mr-2 h-4 w-4" /> Sign Up
-            </Button>
-           )}
-        </Link>
-      </SheetClose>
+            </Link>
+        </Button>
+      )}
     </>
   );
 
@@ -104,7 +149,7 @@ export function Navbar() {
                   <span className="sr-only">Open menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] sm:w-[320px] p-0 pt-8">
+              <SheetContent side="left" className="w-[280px] sm:w-[320px] p-0 pt-8 bg-card"> {/* Ensured bg-card for SheetContent */}
                 <nav className="flex flex-col gap-2 p-4">
                   {isAuthenticated && currentUser && currentUser.role === USER_ROLES.RECOMMENDER ? (
                     commonNavLinks(true)
