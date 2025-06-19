@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet'; // Added SheetHeader, SheetTitle
 import { Home, UserCircle, Users, LogOut, LogIn, UserPlus, BookUser, Sparkles, Menu } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -149,7 +149,10 @@ export function Navbar() {
                   <span className="sr-only">Open menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] sm:w-[320px] p-0 pt-8 bg-card"> {/* Ensured bg-card for SheetContent */}
+              <SheetContent side="left" className="w-[280px] sm:w-[320px] p-0 bg-card">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle className="font-headline text-xl text-primary">Menu</SheetTitle>
+                </SheetHeader>
                 <nav className="flex flex-col gap-2 p-4">
                   {isAuthenticated && currentUser && currentUser.role === USER_ROLES.RECOMMENDER ? (
                     commonNavLinks(true)
