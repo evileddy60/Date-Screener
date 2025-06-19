@@ -14,8 +14,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select
-import { Save, X, ImagePlus, Trash2, Loader2, Briefcase, GraduationCap } from 'lucide-react'; // Added icons
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Save, X, ImagePlus, Trash2, Loader2, Briefcase, GraduationCap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription as ShadCardDescription } from '@/components/ui/card';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
@@ -349,7 +349,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         <FormLabel className="font-body">Friend's Gender</FormLabel>
                         <FormControl>
                             <RadioGroup
-                            onValueChange={field.onChange}
+                            onValueChange={(value) => field.onChange(value === '' ? undefined : value)}
                             value={field.value || ''} 
                             className="flex flex-row space-x-4 items-center pt-1"
                             >
@@ -389,11 +389,11 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
                             <SelectTrigger className="font-body bg-card">
-                                <SelectValue placeholder="Select education level" />
+                                <SelectValue placeholder="-- Select Education Level --" />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            <SelectItem value="">-- Select --</SelectItem>
+                            {/* Removed SelectItem with value="" */}
                             {memoizedEducationLevelOptions.map(option => (
                                 <SelectItem key={option} value={option}>{option}</SelectItem>
                             ))}
@@ -555,7 +555,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                     <FormLabel className="font-body">Interested In (Gender for Matches)</FormLabel>
                     <FormControl>
                         <RadioGroup
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => field.onChange(value === '' ? undefined : value)}
                         value={field.value || ''} 
                         className="flex flex-row space-x-4 items-center pt-1"
                         >
