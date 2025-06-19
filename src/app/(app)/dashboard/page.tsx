@@ -12,23 +12,24 @@ import type { PotentialMatch, ProfileCard } from '@/types';
 import { getPotentialMatchesByMatcher, getProfileCardsByMatcher, getAllProfileCards } from '@/lib/firestoreService';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils'; // Added import for cn
+import { cn } from '@/lib/utils';
 
-const StatDisplayCard = ({ icon: Icon, title, value, description, isLoading, highlight }: { icon: React.ElementType, title: string, value: number | string, description: string, isLoading?: boolean, highlight?: boolean }) => (
-  <Card className={cn("transition-all duration-300", highlight && Number(value) > 0 ? "border-primary shadow-primary/20" : "")}>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className={cn("text-sm font-medium", highlight && Number(value) > 0 ? "text-primary" : "")}>{title}</CardTitle>
+// Renamed and adapted StatDisplayCard to be an item within a larger card.
+const StatItemDisplay = ({ icon: Icon, title, value, description, isLoading, highlight }: { icon: React.ElementType, title: string, value: number | string, description: string, isLoading?: boolean, highlight?: boolean }) => (
+  <div className={cn("flex flex-col p-4 rounded-lg transition-all duration-300 hover:bg-muted/30", highlight && Number(value) > 0 ? "bg-primary/5 border border-primary/20" : "bg-muted/10 border border-transparent")}>
+    <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <h3 className={cn("text-sm font-medium", highlight && Number(value) > 0 ? "text-primary" : "text-muted-foreground")}>{title}</h3>
       <Icon className={cn("h-5 w-5", highlight && Number(value) > 0 ? "text-primary" : "text-muted-foreground")} />
-    </CardHeader>
-    <CardContent>
+    </div>
+    <div>
       {isLoading ? (
         <Skeleton className="h-8 w-1/2 rounded-md" />
       ) : (
-        <div className={cn("text-2xl font-bold", highlight && Number(value) > 0 ? "text-primary" : "")}>{value}</div>
+        <div className={cn("text-2xl font-bold", highlight && Number(value) > 0 ? "text-primary" : "text-foreground")}>{value}</div>
       )}
       <p className="text-xs text-muted-foreground">{description}</p>
-    </CardContent>
-  </Card>
+    </div>
+  </div>
 );
 
 
@@ -42,21 +43,19 @@ export default function DashboardPage() {
   const [networkProfileCardsCount, setNetworkProfileCardsCount] = useState(0);
   
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const MAX_PROFILE_CARDS_DISPLAY_LIMIT = 5; // Used for conditional display
 
   useEffect(() => {
     async function fetchDashboardData() {
       if (currentUser && currentUser.role === USER_ROLES.RECOMMENDER) {
         setIsLoadingStats(true);
         try {
-          // Fetch user's profile cards
           const myCards = await getProfileCardsByMatcher(currentUser.id);
           setUserProfileCardsCount(myCards.length);
 
-          // Fetch all profile cards for network count
           const allCards = await getAllProfileCards();
           setNetworkProfileCardsCount(allCards.length - myCards.length);
 
-          // Fetch potential matches involving the user
           const matchesInvolvingUser = await getPotentialMatchesByMatcher(currentUser.id);
           setMatchSuggestionsCount(matchesInvolvingUser.length);
 
@@ -76,7 +75,6 @@ export default function DashboardPage() {
 
         } catch (error) {
           console.error("Error fetching dashboard data:", error);
-          // Set counts to 0 or handle error display
           setUserProfileCardsCount(0);
           setMatchSuggestionsCount(0);
           setPendingReviewCount(0);
@@ -151,52 +149,57 @@ export default function DashboardPage() {
       </Card>
 
       <section>
-        <h2 className="font-headline text-2xl font-semibold text-foreground mb-4">Your Matchmaking Stats</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <StatDisplayCard 
-            icon={BookUser} 
-            title="Your Profile Cards" 
-            value={userProfileCardsCount}
-            description="Profiles you've created for friends."
-            isLoading={isLoadingStats}
-          />
-          <StatDisplayCard 
-            icon={Shuffle} 
-            title="Match Suggestions" 
-            value={matchSuggestionsCount}
-            description="Total suggestions involving your cards."
-            isLoading={isLoadingStats}
-          />
-           <StatDisplayCard 
-            icon={Bell} 
-            title="Pending Your Review" 
-            value={pendingReviewCount}
-            description="Suggestions needing your decision."
-            isLoading={isLoadingStats}
-            highlight={true}
-          />
-          <StatDisplayCard 
-            icon={PartyPopper} 
-            title="Successful Introductions" 
-            value={successfulIntroductionsCount}
-            description="Matches where everyone accepted!"
-            isLoading={isLoadingStats}
-          />
-          <StatDisplayCard 
-            icon={Globe} 
-            title="Cards in Network" 
-            value={networkProfileCardsCount}
-            description="Profiles from other matchmakers."
-            isLoading={isLoadingStats}
-          />
-           <StatDisplayCard 
-            icon={Info} 
-            title="How To Use" 
-            value="Guide"
-            description="Create cards, find matches, review!"
-            isLoading={false} 
-          />
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl font-semibold text-foreground">Your Matchmaking Stats</CardTitle>
+            <CardDescription className="font-body text-muted-foreground">An overview of your matchmaking activity.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatItemDisplay 
+              icon={BookUser} 
+              title="Your Profile Cards" 
+              value={userProfileCardsCount}
+              description="Profiles you've created for friends."
+              isLoading={isLoadingStats}
+            />
+            <StatItemDisplay 
+              icon={Shuffle} 
+              title="Match Suggestions" 
+              value={matchSuggestionsCount}
+              description="Total suggestions involving your cards."
+              isLoading={isLoadingStats}
+            />
+            <StatItemDisplay 
+              icon={Bell} 
+              title="Pending Your Review" 
+              value={pendingReviewCount}
+              description="Suggestions needing your decision."
+              isLoading={isLoadingStats}
+              highlight={true}
+            />
+            <StatItemDisplay 
+              icon={PartyPopper} 
+              title="Successful Introductions" 
+              value={successfulIntroductionsCount}
+              description="Matches where everyone accepted!"
+              isLoading={isLoadingStats}
+            />
+            <StatItemDisplay 
+              icon={Globe} 
+              title="Cards in Network" 
+              value={networkProfileCardsCount}
+              description="Profiles from other matchmakers."
+              isLoading={isLoadingStats}
+            />
+            <StatItemDisplay 
+              icon={Info} 
+              title="How To Use" 
+              value="Guide"
+              description="Create cards, find matches, review!"
+              isLoading={false} 
+            />
+          </CardContent>
+        </Card>
       </section>
 
       <section>
@@ -219,17 +222,21 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-xl">New to Matchmaking?</CardTitle>
-          <CardDescription className="font-body">Start by creating Profile Cards for your single friends. The more detail, the better the matches!</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <Link href="/profile-cards">Create a Profile Card</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      {userProfileCardsCount < MAX_PROFILE_CARDS_DISPLAY_LIMIT && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-headline text-xl">New to Matchmaking?</CardTitle>
+            <CardDescription className="font-body">Start by creating Profile Cards for your single friends. The more detail, the better the matches!</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/profile-cards">Create a Profile Card</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
+
+    
