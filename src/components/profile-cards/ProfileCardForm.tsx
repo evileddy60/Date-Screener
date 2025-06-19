@@ -68,7 +68,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
 
   const form = useForm<ProfileCardFormData>({
     resolver: zodResolver(profileCardFormSchema),
-    defaultValues: {
+    defaultValues: { // Initial defaults for create mode or before data loads for edit
       friendName: '',
       friendEmail: '',
       friendAge: MIN_AGE,
@@ -86,30 +86,17 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     },
   });
 
-  useEffect(() => {
-    let defaultValues: ProfileCardFormData = {
-      friendName: '',
-      friendEmail: '',
-      friendAge: MIN_AGE,
-      friendGender: undefined,
-      friendPostalCode: '',
-      bio: '',
-      interests: '',
-      photoUrl: '',
-      preferences: {
-        ageRange: `${MIN_AGE}-${MIN_AGE + 10}`,
-        seeking: [],
-        gender: '',
-        location: `${50} km`,
-      },
-    };
+  const { reset } = form;
 
-    if (initialData) {
-      defaultValues = {
+  useEffect(() => {
+    let newDefaultValues: ProfileCardFormData;
+
+    if (initialData && mode === 'edit') {
+      newDefaultValues = {
         friendName: initialData.friendName || '',
         friendEmail: initialData.friendEmail || '',
         friendAge: initialData.friendAge || MIN_AGE,
-        friendGender: initialData.friendGender || undefined,
+        friendGender: initialData.friendGender || undefined, // Will be undefined if not set on old card
         friendPostalCode: initialData.friendPostalCode || '',
         bio: initialData.bio || '',
         interests: Array.isArray(initialData.interests) ? initialData.interests.join(', ') : (initialData.interests || ''),
@@ -117,14 +104,14 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         preferences: {
           ageRange: initialData.preferences?.ageRange || `${MIN_AGE}-${MIN_AGE + 10}`,
           seeking: Array.isArray(initialData.preferences?.seeking) ? initialData.preferences.seeking : [],
-          gender: initialData.preferences?.gender || '',
+          gender: initialData.preferences?.gender || '', // Defaults to empty string if not set
           location: initialData.preferences?.location || `${50} km`,
         },
       };
       
-      setCurrentFriendAge(defaultValues.friendAge);
+      setCurrentFriendAge(newDefaultValues.friendAge);
 
-      const ageRangePref = defaultValues.preferences.ageRange;
+      const ageRangePref = newDefaultValues.preferences.ageRange;
       let parsedMinAgeSlider = MIN_AGE;
       let parsedMaxAgeSlider = MIN_AGE + 10;
       if (typeof ageRangePref === 'string' && /^\d{1,2}-\d{1,2}$/.test(ageRangePref)) {
@@ -138,7 +125,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       }
       setCurrentAgeRange([parsedMinAgeSlider, parsedMaxAgeSlider]);
 
-      const locationPref = defaultValues.preferences.location;
+      const locationPref = newDefaultValues.preferences.location;
       let parsedProximitySlider = 50;
       if (typeof locationPref === 'string' && /^\d+ km$/.test(locationPref)) {
         const prox = parseInt(locationPref.replace(' km', ''), 10);
@@ -148,13 +135,29 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       }
       setCurrentProximity(parsedProximitySlider);
 
-    } else { // Create mode, ensure slider states are reset too
+    } else { // Create mode, or initialData is not yet available
+      newDefaultValues = {
+        friendName: '',
+        friendEmail: '',
+        friendAge: MIN_AGE,
+        friendGender: undefined,
+        friendPostalCode: '',
+        bio: '',
+        interests: '',
+        photoUrl: '',
+        preferences: {
+          ageRange: `${MIN_AGE}-${MIN_AGE + 10}`,
+          seeking: [],
+          gender: '',
+          location: `${50} km`,
+        },
+      };
       setCurrentFriendAge(MIN_AGE);
       setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
       setCurrentProximity(50);
     }
-    form.reset(defaultValues);
-  }, [initialData, form]);
+    reset(newDefaultValues);
+  }, [initialData, mode, reset]);
 
   const memoizedSeekingOptions = useMemo(() => SEEKING_OPTIONS, []);
   const memoizedFriendGenderOptions = useMemo(() => FRIEND_GENDER_OPTIONS, []);
@@ -229,7 +232,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         <FormControl>
                             <RadioGroup
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value} // Use value for controlled component
                             className="flex flex-row space-x-4 items-center pt-1"
                             >
                             {memoizedFriendGenderOptions.map((option) => (
@@ -370,7 +373,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                     <FormControl>
                         <RadioGroup
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value} // Use value for controlled component
                         className="flex flex-row space-x-4 items-center pt-1"
                         >
                         {memoizedPreferredGenderOptions.map((option) => (
@@ -428,7 +431,5 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     </Card>
   );
 }
-
-    
 
     
