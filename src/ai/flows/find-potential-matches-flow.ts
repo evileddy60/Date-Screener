@@ -17,7 +17,6 @@ import {
   addPotentialMatch 
 } from '@/lib/firestoreService';
 import type { ProfileCard, PotentialMatch } from '@/types';
-// Removed FRIEND_GENDER_OPTIONS import as it's directly defined in ProfileCardPromptSchema's enum now
 
 
 const ProfileCardPromptSchema = z.object({
@@ -25,13 +24,14 @@ const ProfileCardPromptSchema = z.object({
   friendName: z.string(),
   friendAge: z.number().optional().describe("The actual age of the friend this profile card represents. May not be present for older cards."),
   friendGender: z.enum(["Man", "Woman", "Other"]).optional().describe("The gender of the friend this profile card represents."),
+  friendPostalCode: z.string().optional().describe("The Canadian postal code of the friend (e.g., M5V2T6). This is the reference for their location preference."),
   bio: z.string(),
   interests: z.array(z.string()),
   preferences: z.object({
     ageRange: z.string().optional().describe("The preferred age range for a match, e.g., '25-35'."),
     seeking: z.string().optional().describe("What the friend is seeking in a match, e.g., 'Long-term relationship, Companionship'."), 
     gender: z.string().optional().describe("The gender the friend is interested in matching with, e.g., 'Men', 'Women', 'Other'."), // This is gender they are *seeking*
-    location: z.string().optional().describe("The preferred proximity for a match, e.g., '50 km'."),
+    location: z.string().optional().describe("The preferred proximity for a match, as a string like '50 km'. This is relative to their friendPostalCode."),
   }).optional(),
 });
 type ProfileCardPrompt = z.infer<typeof ProfileCardPromptSchema>;
@@ -74,9 +74,10 @@ const prompt = ai.definePrompt({
   
   Key matching criteria:
   1.  **Age Compatibility**: The 'friendAge' of one card should ideally fall within the 'ageRange' specified in the preferences of the other card, and vice-versa. If a card's 'friendAge' is not provided, this aspect cannot be strictly assessed for that card. The 'ageRange' preference is a string like "min-max".
-  2.  **Gender Compatibility**: The 'friendGender' of one card must align with the 'gender' preference (gender sought) of the other card, and vice-versa. For example, if Target Card's friend is "Woman" and they are seeking "Men", a Candidate Card's friend should be "Man". If Target Card's friend is "Man" and they are seeking "Women", a Candidate Card's friend should be "Woman". If a preference or friend's gender is "Other", be more flexible but prioritize stated preferences.
-  3.  **Mutual Preferences**: Consider stated preferences for 'seeking' (relationship goals) and 'location' (proximity).
-  4.  **Shared Interests & Bio**: Look for common interests and complementary personality traits described in their bios.
+  2.  **Gender Compatibility**: The 'friendGender' of one card must align with the 'gender' preference (gender sought) of the other card, and vice-versa. For example, if Target Card's friend is "Woman" and they are seeking "Men", a Candidate Card's friend should be "Man". If a preference or friend's gender is "Other" or not provided, be more flexible but prioritize stated preferences.
+  3.  **Location Compatibility**: Each card may have a 'friendPostalCode' (e.g., M5V2T6) and a 'preferences.location' (e.g., 'within 50 km'). The 'preferences.location' indicates a desired search radius FROM THEIR OWN POSTAL CODE. While you cannot calculate exact distances, give higher compatibility if their postal codes and preferred proximities suggest they could realistically meet. For instance, two cards with Toronto postal codes (e.g., 'M5W1E6' and 'M4P2G2') and '20 km' preferences are more compatible location-wise than a Toronto card and a Vancouver card if both have '20 km' preferences. If postal codes are missing, rely on the stated 'preferences.location' more generally, assuming it's from a meaningful (but unspecified) anchor point.
+  4.  **Mutual Preferences**: Consider stated preferences for 'seeking' (relationship goals).
+  5.  **Shared Interests & Bio**: Look for common interests and complementary personality traits described in their bios.
 
   For each potential match, assign a compatibility score out of 100 and explain your reasoning in 2-3 sentences. Present the matches as a ranked list from most to least compatible.
 
@@ -85,13 +86,14 @@ const prompt = ai.definePrompt({
   Name: {{{targetCard.friendName}}}
   Actual Age: {{#if targetCard.friendAge}}{{{targetCard.friendAge}}}{{else}}Not Provided{{/if}}
   Gender: {{#if targetCard.friendGender}}{{{targetCard.friendGender}}}{{else}}Not Provided{{/if}}
+  Postal Code: {{#if targetCard.friendPostalCode}}{{{targetCard.friendPostalCode}}}{{else}}Not Provided{{/if}}
   Bio: {{{targetCard.bio}}}
   Interests: {{#each targetCard.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
   Preferences for a Match:
     Preferred Age Range: {{{targetCard.preferences.ageRange}}}
     Seeking: {{{targetCard.preferences.seeking}}}
     Interested in Gender: {{{targetCard.preferences.gender}}}
-    Preferred Location: {{{targetCard.preferences.location}}}
+    Preferred Proximity: {{{targetCard.preferences.location}}}
 
   Candidate Profile Cards:
   {{#each candidateCards}}
@@ -99,13 +101,14 @@ const prompt = ai.definePrompt({
     Name: {{{this.friendName}}}
     Actual Age: {{#if this.friendAge}}{{{this.friendAge}}}{{else}}Not Provided{{/if}}
     Gender: {{#if this.friendGender}}{{{this.friendGender}}}{{else}}Not Provided{{/if}}
+    Postal Code: {{#if this.friendPostalCode}}{{{this.friendPostalCode}}}{{else}}Not Provided{{/if}}
     Bio: {{{this.bio}}}
     Interests: {{#each this.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
     Preferences for a Match:
       Preferred Age Range: {{{this.preferences.ageRange}}}
       Seeking: {{{this.preferences.seeking}}}
       Interested in Gender: {{{this.preferences.gender}}}
-      Preferred Location: {{{this.preferences.location}}}
+      Preferred Proximity: {{{this.preferences.location}}}
   {{/each}}
 
   Identify the top 3-5 best potential matches from the candidate list.
@@ -147,7 +150,8 @@ const findPotentialMatchesFlow = ai.defineFlow(
         id: targetCardFull.id,
         friendName: targetCardFull.friendName,
         friendAge: targetCardFull.friendAge,
-        friendGender: targetCardFull.friendGender as "Man" | "Woman" | "Other" | undefined, // Cast to match schema
+        friendGender: targetCardFull.friendGender as "Man" | "Woman" | "Other" | undefined,
+        friendPostalCode: targetCardFull.friendPostalCode,
         bio: targetCardFull.bio,
         interests: targetCardFull.interests,
         preferences: targetCardFull.preferences ? {
@@ -159,7 +163,8 @@ const findPotentialMatchesFlow = ai.defineFlow(
         id: card.id,
         friendName: card.friendName,
         friendAge: card.friendAge,
-        friendGender: card.friendGender as "Man" | "Woman" | "Other" | undefined, // Cast to match schema
+        friendGender: card.friendGender as "Man" | "Woman" | "Other" | undefined,
+        friendPostalCode: card.friendPostalCode,
         bio: card.bio,
         interests: card.interests,
         preferences: card.preferences ? {

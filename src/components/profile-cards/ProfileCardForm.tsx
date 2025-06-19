@@ -26,11 +26,18 @@ const MIN_PROXIMITY = 0;
 const MAX_PROXIMITY = 250; // km
 const PROXIMITY_STEP = 5; // km
 
+// Canadian Postal Code Regex: allows optional space or hyphen in the middle
+const canadianPostalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
+
 export const profileCardFormSchema = z.object({
   friendName: z.string().min(2, "Friend's name must be at least 2 characters."),
   friendEmail: z.string().email("Invalid email address for friend.").optional().or(z.literal('')),
   friendAge: z.coerce.number().min(MIN_AGE, `Age must be ${MIN_AGE} or older.`).max(MAX_AGE, `Age must be ${MAX_AGE} or younger.`),
   friendGender: z.enum(FRIEND_GENDER_OPTIONS, { required_error: "Please select your friend's gender."}),
+  friendPostalCode: z.string()
+    .regex(canadianPostalCodeRegex, "Invalid Canadian Postal Code format (e.g., A1A 1A1 or M5V2T6).")
+    .transform(val => val.toUpperCase().replace(/[ -]/g, '')) // Normalize to A1A1A1 format
+    .optional().or(z.literal('')),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
   photoUrl: z.string().url("Invalid URL format for photo.").optional().or(z.literal('')),
@@ -40,7 +47,7 @@ export const profileCardFormSchema = z.object({
       .optional().or(z.literal('')),
     seeking: z.array(z.string()).optional().default([]),
     gender: z.enum([...PREFERRED_GENDER_OPTIONS, ""] as const).optional(), // Gender friend is seeking
-    location: z.string()
+    location: z.string() // This is the proximity string like "50 km"
       .refine(val => !val || /^\d+ km$/.test(val), { message: "Proximity must be in 'X km' format (e.g., '50 km') or empty."})
       .optional().or(z.literal('')),
   }).optional().default({ ageRange: "", seeking: [], gender: "", location: ""}),
@@ -68,6 +75,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       friendEmail: '',
       friendAge: MIN_AGE,
       friendGender: undefined, 
+      friendPostalCode: '',
       bio: '',
       interests: [], 
       photoUrl: '',
@@ -88,6 +96,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         friendEmail: initialData.friendEmail || '',
         friendAge: initialFriendAge,
         friendGender: initialData.friendGender || undefined,
+        friendPostalCode: initialData.friendPostalCode || '',
         bio: initialData.bio,
         interests: initialData.interests.join(', '), 
         photoUrl: initialData.photoUrl || '',
@@ -106,14 +115,14 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         }
       }
       if (initialData.preferences?.location) {
-        const prox = parseInt(initialData.preferences.location);
+        const prox = parseInt(initialData.preferences.location.replace(' km', ''));
         if(!isNaN(prox) && prox >= MIN_PROXIMITY && prox <= MAX_PROXIMITY) {
             setCurrentProximity(prox);
         }
       }
     } else {
       form.reset({
-        friendName: '', friendEmail: '', friendAge: MIN_AGE, friendGender: undefined, bio: '', interests: '', photoUrl: '',
+        friendName: '', friendEmail: '', friendAge: MIN_AGE, friendGender: undefined, friendPostalCode: '', bio: '', interests: '', photoUrl: '',
         preferences: { ageRange: `${MIN_AGE}-${MIN_AGE + 10}`, seeking: [], gender: '', location: `${50} km` },
       });
       setCurrentFriendAge(MIN_AGE);
@@ -194,10 +203,10 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                             <RadioGroup
                             onValueChange={field.onChange}
                             defaultValue={field.value}
-                            className="flex flex-row space-x-4 items-center pt-1" // Updated class for horizontal layout
+                            className="flex flex-row space-x-4 items-center pt-1"
                             >
                             {memoizedFriendGenderOptions.map((option) => (
-                                <FormItem key={option} className="flex items-center space-x-2 space-y-0"> {/* Adjusted space-x for tighter button+label */}
+                                <FormItem key={option} className="flex items-center space-x-2 space-y-0">
                                 <FormControl>
                                     <RadioGroupItem value={option} />
                                 </FormControl>
@@ -209,6 +218,18 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         <FormMessage />
                         </FormItem>
                     )}
+                />
+                <FormField
+                  control={form.control}
+                  name="friendPostalCode"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel className="font-body">Friend's Canadian Postal Code (Optional)</FormLabel>
+                      <FormControl><Input placeholder="e.g., M5V 2T6 or A1A1A1" {...field} className="font-body bg-card" /></FormControl>
+                      <FormDescription className="font-body text-xs">This helps match with others in their vicinity. Used as the reference for their proximity preference.</FormDescription>
+                      <FormMessage />
+                      </FormItem>
+                  )}
                 />
                 <FormField
                 control={form.control}
@@ -321,10 +342,10 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         <RadioGroup
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        className="flex flex-row space-x-4 items-center pt-1" // Updated class for horizontal layout
+                        className="flex flex-row space-x-4 items-center pt-1" 
                         >
                         {memoizedPreferredGenderOptions.map((option) => ( 
-                            <FormItem key={option} className="flex items-center space-x-2 space-y-0"> {/* Adjusted space-x for tighter button+label */}
+                            <FormItem key={option} className="flex items-center space-x-2 space-y-0"> 
                             <FormControl>
                                 <RadioGroupItem value={option} />
                             </FormControl>
@@ -340,10 +361,10 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
 
                 <FormField
                 control={form.control}
-                name="preferences.location"
+                name="preferences.location" // This field now stores "X km"
                 render={({ field }) => ( 
                     <FormItem>
-                    <FormLabel className="font-body">Preferred Proximity for Matches: {currentProximity} km</FormLabel>
+                    <FormLabel className="font-body">Preferred Proximity from their Postal Code: {currentProximity} km</FormLabel>
                     <Slider
                         value={[currentProximity]} 
                         onValueChange={(newVal) => {
@@ -355,6 +376,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         step={PROXIMITY_STEP}
                         className="py-2"
                     />
+                     <FormDescription className="font-body text-xs">How far from their postal code they're willing to match.</FormDescription>
                     <FormMessage />
                     </FormItem>
                 )}

@@ -37,6 +37,7 @@ export interface ProfileCard { // Profile of a single friend, created by a Match
   friendEmail?: string; // For potential future email notifications to the friend
   friendAge?: number; // Actual age of the friend
   friendGender?: typeof FRIEND_GENDER_OPTIONS[number]; // Friend's own gender
+  friendPostalCode?: string; // Friend's Canadian Postal Code (e.g., "A1A1A1" or "A1A 1A1")
   bio: string;
   interests: string[];
   photoUrl?: string;
@@ -44,7 +45,7 @@ export interface ProfileCard { // Profile of a single friend, created by a Match
     ageRange?: string; // e.g., "25-35"
     seeking?: string[]; // Changed from string to string[]
     gender?: string; // e.g., "Men", "Women", "Other" - Gender the friend is seeking
-    location?: string; // e.g., "50 km"
+    location?: string; // e.g., "within 50 km" - This is relative to friendPostalCode
   };
   createdAt: string; // ISO date string
 }

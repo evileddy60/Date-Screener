@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Info, Edit, Search, CalendarDays, AtSign, Heart, MapPin, UsersIcon, Trash2, Cake, VenetianMask } from 'lucide-react'; // Added VenetianMask for Gender
+import { User, Info, Edit, Search, CalendarDays, AtSign, Heart, MapPin, UsersIcon, Trash2, Cake, VenetianMask, Home } from 'lucide-react'; // Added Home for Postal Code
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { mockUserProfiles } from '@/lib/mockData'; 
@@ -65,6 +65,11 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteR
                         <VenetianMask className="w-3 h-3"/> Gender: {profileCard.friendGender}
                     </CardDescription>
                 )}
+                {profileCard.friendPostalCode && (
+                     <CardDescription className="font-body text-xs text-foreground/60 flex items-center gap-1 mt-0.5">
+                        <Home className="w-3 h-3"/> Postal Code: {profileCard.friendPostalCode}
+                    </CardDescription>
+                )}
              </div>
           </div>
         </div>
@@ -100,8 +105,8 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteR
             {profileCard.preferences.gender && ( // This is the GENDER THEY ARE SEEKING
               <p className="flex items-center gap-1"><UsersIcon className="w-3 h-3 text-primary/70"/> Interested in: {profileCard.preferences.gender}</p>
             )}
-            {profileCard.preferences.location && (
-              <p className="flex items-center gap-1"><MapPin className="w-3 h-3 text-primary/70"/> Location: {profileCard.preferences.location}</p>
+            {profileCard.preferences.location && ( // This is the PROXIMITY from their postal code
+              <p className="flex items-center gap-1"><MapPin className="w-3 h-3 text-primary/70"/> Proximity: {profileCard.preferences.location}</p>
             )}
           </div>
         )}
@@ -128,3 +133,4 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteR
   );
 }
     
+
