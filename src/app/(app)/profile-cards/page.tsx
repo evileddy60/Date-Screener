@@ -7,7 +7,7 @@ import { getProfileCardsByMatcher, deleteProfileCard } from '@/lib/firestoreServ
 import type { ProfileCard as ProfileCardType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ProfileCardDisplay } from '@/components/profile-cards/ProfileCardDisplay';
-import { Loader2, PlusCircle, UserX, BookOpen, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, UserX, BookOpen, Trash2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 
-// Removed MAX_PROFILE_CARDS_LIMIT
+const MAX_PROFILE_CARDS_LIMIT = 5;
 
 export default function ProfileCardsPage() {
   const { currentUser, isLoading: authLoading } = useAuth();
@@ -63,7 +63,15 @@ export default function ProfileCardsPage() {
   }, [currentUser, authLoading, router, toast]);
 
   const handleNavigateToCreate = () => {
-    router.push('/profile-cards/manage');
+    if (myProfileCards.length < MAX_PROFILE_CARDS_LIMIT) {
+      router.push('/profile-cards/manage');
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Limit Reached",
+        description: `You can only create up to ${MAX_PROFILE_CARDS_LIMIT} profile cards.`,
+      });
+    }
   };
 
   const handleNavigateToEdit = (profileCardId: string) => {
@@ -123,21 +131,34 @@ export default function ProfileCardsPage() {
    );
  }
 
+  const canCreateMoreCards = myProfileCards.length < MAX_PROFILE_CARDS_LIMIT;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="text-center sm:text-left">
             <h1 className="font-headline text-4xl font-semibold text-primary">My Profile Cards</h1>
-             <p className="font-body text-muted-foreground">You have created {myProfileCards.length} profile card{myProfileCards.length === 1 ? '' : 's'}. Create as many as you need!</p>
+             <p className="font-body text-muted-foreground">You have created {myProfileCards.length} of {MAX_PROFILE_CARDS_LIMIT} profile card{myProfileCards.length === 1 ? '' : 's'}.</p>
         </div>
         <Button
           onClick={handleNavigateToCreate}
+          disabled={!canCreateMoreCards}
           className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md"
-          title={"Create a new profile card for a friend"}
+          title={!canCreateMoreCards ? `You have reached the limit of ${MAX_PROFILE_CARDS_LIMIT} profile cards.` : "Create a new profile card for a friend"}
         >
           <PlusCircle className="mr-2 h-5 w-5" /> Create New Profile Card
         </Button>
       </div>
+
+      {!canCreateMoreCards && (
+        <Alert variant="default" className="bg-secondary/20 border-secondary/30">
+          <AlertCircle className="h-4 w-4 text-secondary-foreground" />
+          <AlertTitle className="font-headline text-secondary-foreground">Profile Card Limit Reached</AlertTitle>
+          <AlertDescription className="font-body text-secondary-foreground/80">
+            You have reached the maximum of {MAX_PROFILE_CARDS_LIMIT} profile cards. To create new ones, you may need to delete existing cards.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {myProfileCards.length === 0 ? (
         <Card className="text-center py-12">
