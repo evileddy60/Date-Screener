@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Info, Edit, Search, CalendarDays, AtSign, Heart, MapPin, UsersIcon, Trash2 } from 'lucide-react'; 
+import { User, Info, Edit, Search, CalendarDays, AtSign, Heart, MapPin, UsersIcon, Trash2, Cake } from 'lucide-react'; 
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { mockUserProfiles } from '@/lib/mockData'; 
@@ -54,6 +54,11 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteR
                     <AtSign className="w-3 h-3"/> {profileCard.friendEmail}
                 </CardDescription>
              )}
+             {profileCard.friendAge && (
+                <CardDescription className="font-body text-xs text-foreground/60 flex items-center gap-1 mt-0.5">
+                    <Cake className="w-3 h-3"/> Age: {profileCard.friendAge}
+                </CardDescription>
+             )}
           </div>
         </div>
         <div className="flex flex-wrap gap-1">
@@ -72,9 +77,9 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteR
         </div>
         {profileCard.preferences && (
           <div className="font-body text-xs text-muted-foreground space-y-1 border-t border-border/50 pt-2 mt-2">
-            <h4 className="font-semibold text-foreground/70 mb-1">Preferences:</h4>
+            <h4 className="font-semibold text-foreground/70 mb-1">Preferences for Matches:</h4>
             {profileCard.preferences.ageRange && (
-              <p className="flex items-center gap-1"><CalendarDays className="w-3 h-3 text-primary/70"/> Age: {profileCard.preferences.ageRange}</p>
+              <p className="flex items-center gap-1"><CalendarDays className="w-3 h-3 text-primary/70"/> Desired Age: {profileCard.preferences.ageRange}</p>
             )}
             {profileCard.preferences.seeking && profileCard.preferences.seeking.length > 0 && (
               <p className="flex items-start gap-1">

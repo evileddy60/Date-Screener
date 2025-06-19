@@ -33,6 +33,7 @@ export interface ProfileCard { // Profile of a single friend, created by a Match
   matcherName: string; // Name of the matcher who created this card
   friendName: string;
   friendEmail?: string; // For potential future email notifications to the friend
+  friendAge?: number; // Actual age of the friend
   bio: string;
   interests: string[];
   photoUrl?: string;
@@ -71,4 +72,3 @@ export interface MatchFeedback {
   comments?: string;
   createdAt: string; // ISO date string
 }
-

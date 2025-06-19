@@ -22,13 +22,14 @@ import type { ProfileCard, PotentialMatch } from '@/types';
 const ProfileCardPromptSchema = z.object({
   id: z.string(),
   friendName: z.string(),
+  friendAge: z.number().optional().describe("The actual age of the friend this profile card represents. May not be present for older cards."),
   bio: z.string(),
   interests: z.array(z.string()),
   preferences: z.object({
-    ageRange: z.string().optional(),
-    seeking: z.string().optional(), // This should be string for the prompt as AI might not handle array well for seeking in prompt
-    gender: z.string().optional(),
-    location: z.string().optional(),
+    ageRange: z.string().optional().describe("The preferred age range for a match, e.g., '25-35'."),
+    seeking: z.string().optional().describe("What the friend is seeking in a match, e.g., 'Long-term relationship, Companionship'."), 
+    gender: z.string().optional().describe("The gender the friend is interested in matching with, e.g., 'Men', 'Women', 'Other'."),
+    location: z.string().optional().describe("The preferred proximity for a match, e.g., '50 km'."),
   }).optional(),
   // createdByMatcherId: z.string(), // Context only, not directly used by AI unless prompted
 });
@@ -68,30 +69,39 @@ const prompt = ai.definePrompt({
     candidateCards: z.array(ProfileCardPromptSchema),
   })},
   output: { schema: AIOutputSchema },
-  prompt: `You are a matchmaking assistant. Analyze the following profile cards to determine the best matches between friends. Consider matching preferences (age range, gender, location), shared interests, relationship goals, and personality descriptions. For each potential match, assign a compatibility score out of 100 and explain your reasoning in 2-3 sentences. Present the matches as a ranked list from most to least compatible.
+  prompt: `You are a matchmaking assistant. Analyze the following profile cards to determine the best matches between friends.
+  
+  Key matching criteria:
+  1.  **Age Compatibility**: The 'friendAge' of one card should ideally fall within the 'ageRange' specified in the preferences of the other card, and vice-versa. If a card's 'friendAge' is not provided, this aspect cannot be strictly assessed for that card. The 'ageRange' preference is a string like "min-max".
+  2.  **Mutual Preferences**: Consider stated preferences for 'seeking' (relationship goals), 'gender' (interest in), and 'location' (proximity).
+  3.  **Shared Interests & Bio**: Look for common interests and complementary personality traits described in their bios.
+
+  For each potential match, assign a compatibility score out of 100 and explain your reasoning in 2-3 sentences. Present the matches as a ranked list from most to least compatible.
 
   Target Profile Card:
   ID: {{{targetCard.id}}}
   Name: {{{targetCard.friendName}}}
+  Actual Age: {{#if targetCard.friendAge}}{{{targetCard.friendAge}}}{{else}}Not Provided{{/if}}
   Bio: {{{targetCard.bio}}}
   Interests: {{#each targetCard.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-  Preferences:
-    Age Range: {{{targetCard.preferences.ageRange}}}
+  Preferences for a Match:
+    Preferred Age Range: {{{targetCard.preferences.ageRange}}}
     Seeking: {{{targetCard.preferences.seeking}}}
-    Gender: {{{targetCard.preferences.gender}}}
-    Location: {{{targetCard.preferences.location}}}
+    Interested in Gender: {{{targetCard.preferences.gender}}}
+    Preferred Location: {{{targetCard.preferences.location}}}
 
   Candidate Profile Cards:
   {{#each candidateCards}}
   - Card ID: {{{this.id}}}
     Name: {{{this.friendName}}}
+    Actual Age: {{#if this.friendAge}}{{{this.friendAge}}}{{else}}Not Provided{{/if}}
     Bio: {{{this.bio}}}
     Interests: {{#each this.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-    Preferences:
-      Age Range: {{{this.preferences.ageRange}}}
+    Preferences for a Match:
+      Preferred Age Range: {{{this.preferences.ageRange}}}
       Seeking: {{{this.preferences.seeking}}}
-      Gender: {{{this.preferences.gender}}}
-      Location: {{{this.preferences.location}}}
+      Interested in Gender: {{{this.preferences.gender}}}
+      Preferred Location: {{{this.preferences.location}}}
   {{/each}}
 
   Identify the top 3-5 best potential matches from the candidate list.
@@ -134,6 +144,7 @@ const findPotentialMatchesFlow = ai.defineFlow(
     const targetCardPromptData: ProfileCardPrompt = {
         id: targetCardFull.id,
         friendName: targetCardFull.friendName,
+        friendAge: targetCardFull.friendAge,
         bio: targetCardFull.bio,
         interests: targetCardFull.interests,
         preferences: targetCardFull.preferences ? {
@@ -144,6 +155,7 @@ const findPotentialMatchesFlow = ai.defineFlow(
     const candidateCardsPromptData: ProfileCardPrompt[] = candidateCardsFull.map(card => ({
         id: card.id,
         friendName: card.friendName,
+        friendAge: card.friendAge,
         bio: card.bio,
         interests: card.interests,
         preferences: card.preferences ? {

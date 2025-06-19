@@ -29,6 +29,7 @@ const PROXIMITY_STEP = 5; // km
 export const profileCardFormSchema = z.object({
   friendName: z.string().min(2, "Friend's name must be at least 2 characters."),
   friendEmail: z.string().email("Invalid email address for friend.").optional().or(z.literal('')),
+  friendAge: z.coerce.number().min(18, "Age must be 18 or older.").max(99, "Age must be 99 or younger."),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
   photoUrl: z.string().url("Invalid URL format for photo.").optional().or(z.literal('')),
@@ -63,6 +64,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     defaultValues: {
       friendName: '',
       friendEmail: '',
+      friendAge: MIN_AGE,
       bio: '',
       interests: [], // Will be a string in the form input
       photoUrl: '',
@@ -80,6 +82,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       form.reset({
         friendName: initialData.friendName,
         friendEmail: initialData.friendEmail || '',
+        friendAge: initialData.friendAge || MIN_AGE,
         bio: initialData.bio,
         interests: initialData.interests.join(', '), // Convert array to comma-separated string for input
         photoUrl: initialData.photoUrl || '',
@@ -105,7 +108,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     } else {
       // Reset to default for create mode if initialData becomes null/undefined
       form.reset({
-        friendName: '', friendEmail: '', bio: '', interests: '', photoUrl: '',
+        friendName: '', friendEmail: '', friendAge: MIN_AGE, bio: '', interests: '', photoUrl: '',
         preferences: { ageRange: `${MIN_AGE}-${MIN_AGE + 10}`, seeking: [], gender: '', location: `${50} km` },
       });
       setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
@@ -153,6 +156,19 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 )}
                 />
                 <FormField
+                  control={form.control}
+                  name="friendAge"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-body">Friend's Age</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 30" {...field} className="font-body bg-card" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
                 control={form.control}
                 name="bio"
                 render={({ field }) => (
@@ -194,7 +210,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 name="preferences.ageRange"
                 render={({ field }) => ( 
                     <FormItem>
-                    <FormLabel className="font-body">Preferred Age Range: {currentAgeRange[0]} - {currentAgeRange[1]}</FormLabel>
+                    <FormLabel className="font-body">Preferred Age Range for Matches: {currentAgeRange[0]} - {currentAgeRange[1]}</FormLabel>
                     <Slider
                         value={currentAgeRange}
                         onValueChange={(newVal) => {
@@ -216,7 +232,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 name="preferences.seeking"
                 render={() => (
                     <FormItem>
-                    <FormLabel className="font-body">What They're Seeking</FormLabel>
+                    <FormLabel className="font-body">What They're Seeking in a Match</FormLabel>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                         {memoizedSeekingOptions.map((option) => (
                         <FormField
@@ -258,7 +274,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 name="preferences.gender"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel className="font-body">Interested In (Gender)</FormLabel>
+                    <FormLabel className="font-body">Interested In (Gender for Matches)</FormLabel>
                     <FormControl>
                         <RadioGroup
                         onValueChange={field.onChange}
@@ -285,7 +301,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 name="preferences.location"
                 render={({ field }) => ( 
                     <FormItem>
-                    <FormLabel className="font-body">Preferred Proximity: {currentProximity} km</FormLabel>
+                    <FormLabel className="font-body">Preferred Proximity for Matches: {currentProximity} km</FormLabel>
                     <Slider
                         value={[currentProximity]} 
                         onValueChange={(newVal) => {
