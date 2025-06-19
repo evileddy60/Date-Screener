@@ -27,7 +27,7 @@ export interface UserProfile { // This is now the Matcher's profile
   privacySettings?: PrivacySettingsData;
 }
 
-export const FRIEND_GENDER_OPTIONS = ["Woman", "Man", "Non-binary", "Other", "Prefer not to say"] as const;
+export const FRIEND_GENDER_OPTIONS = ["Man", "Woman", "Other"] as const;
 
 export interface ProfileCard { // Profile of a single friend, created by a Matcher
   id: string;
@@ -75,3 +75,5 @@ export interface MatchFeedback {
   comments?: string;
   createdAt: string; // ISO date string
 }
+
+    

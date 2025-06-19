@@ -17,14 +17,14 @@ import {
   addPotentialMatch 
 } from '@/lib/firestoreService';
 import type { ProfileCard, PotentialMatch } from '@/types';
-import { FRIEND_GENDER_OPTIONS } from '@/types';
+// Removed FRIEND_GENDER_OPTIONS import as it's directly defined in ProfileCardPromptSchema's enum now
 
 
 const ProfileCardPromptSchema = z.object({
   id: z.string(),
   friendName: z.string(),
   friendAge: z.number().optional().describe("The actual age of the friend this profile card represents. May not be present for older cards."),
-  friendGender: z.enum(FRIEND_GENDER_OPTIONS).optional().describe("The gender of the friend this profile card represents."),
+  friendGender: z.enum(["Man", "Woman", "Other"]).optional().describe("The gender of the friend this profile card represents."),
   bio: z.string(),
   interests: z.array(z.string()),
   preferences: z.object({
@@ -74,7 +74,7 @@ const prompt = ai.definePrompt({
   
   Key matching criteria:
   1.  **Age Compatibility**: The 'friendAge' of one card should ideally fall within the 'ageRange' specified in the preferences of the other card, and vice-versa. If a card's 'friendAge' is not provided, this aspect cannot be strictly assessed for that card. The 'ageRange' preference is a string like "min-max".
-  2.  **Gender Compatibility**: The 'friendGender' of one card must align with the 'gender' preference (gender sought) of the other card, and vice-versa. For example, if Target Card's friend is "Woman" and they are seeking "Men", a Candidate Card's friend should be "Man". If Target Card's friend is "Man" and they are seeking "Women", a Candidate Card's friend should be "Woman". If a preference or friend's gender is "Other" or "Non-binary" or "Prefer not to say", be more flexible but prioritize stated preferences.
+  2.  **Gender Compatibility**: The 'friendGender' of one card must align with the 'gender' preference (gender sought) of the other card, and vice-versa. For example, if Target Card's friend is "Woman" and they are seeking "Men", a Candidate Card's friend should be "Man". If Target Card's friend is "Man" and they are seeking "Women", a Candidate Card's friend should be "Woman". If a preference or friend's gender is "Other", be more flexible but prioritize stated preferences.
   3.  **Mutual Preferences**: Consider stated preferences for 'seeking' (relationship goals) and 'location' (proximity).
   4.  **Shared Interests & Bio**: Look for common interests and complementary personality traits described in their bios.
 
@@ -147,7 +147,7 @@ const findPotentialMatchesFlow = ai.defineFlow(
         id: targetCardFull.id,
         friendName: targetCardFull.friendName,
         friendAge: targetCardFull.friendAge,
-        friendGender: targetCardFull.friendGender,
+        friendGender: targetCardFull.friendGender as "Man" | "Woman" | "Other" | undefined, // Cast to match schema
         bio: targetCardFull.bio,
         interests: targetCardFull.interests,
         preferences: targetCardFull.preferences ? {
@@ -159,7 +159,7 @@ const findPotentialMatchesFlow = ai.defineFlow(
         id: card.id,
         friendName: card.friendName,
         friendAge: card.friendAge,
-        friendGender: card.friendGender,
+        friendGender: card.friendGender as "Man" | "Woman" | "Other" | undefined, // Cast to match schema
         bio: card.bio,
         interests: card.interests,
         preferences: card.preferences ? {
@@ -233,3 +233,5 @@ const findPotentialMatchesFlow = ai.defineFlow(
     return { createdPotentialMatchIds };
   }
 );
+
+    

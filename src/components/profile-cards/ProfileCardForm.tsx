@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription as ShadCardDe
 
 
 const SEEKING_OPTIONS = ["Long-term relationship", "Companionship", "Friendship", "Casual dating", "Marriage", "Prefer not to say"];
-const PREFERRED_GENDER_OPTIONS = ["Men", "Women", "Other"]; // Gender friend is seeking
+const PREFERRED_GENDER_OPTIONS = ["Men", "Woman", "Other"]; // Gender friend is seeking
 const MIN_AGE = 18;
 const MAX_AGE = 99;
 const MIN_PROXIMITY = 0;
@@ -29,7 +29,7 @@ const PROXIMITY_STEP = 5; // km
 export const profileCardFormSchema = z.object({
   friendName: z.string().min(2, "Friend's name must be at least 2 characters."),
   friendEmail: z.string().email("Invalid email address for friend.").optional().or(z.literal('')),
-  friendAge: z.coerce.number().min(18, "Age must be 18 or older.").max(99, "Age must be 99 or younger."),
+  friendAge: z.coerce.number().min(MIN_AGE, `Age must be ${MIN_AGE} or older.`).max(MAX_AGE, `Age must be ${MAX_AGE} or younger.`),
   friendGender: z.enum(FRIEND_GENDER_OPTIONS, { required_error: "Please select your friend's gender."}),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
@@ -58,6 +58,7 @@ interface ProfileCardFormProps {
 
 export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmitting }: ProfileCardFormProps) {
   const [currentAgeRange, setCurrentAgeRange] = useState<[number, number]>([MIN_AGE, MIN_AGE + 10]);
+  const [currentFriendAge, setCurrentFriendAge] = useState<number>(MIN_AGE);
   const [currentProximity, setCurrentProximity] = useState<number>(50);
 
   const form = useForm<ProfileCardFormData>({
@@ -66,14 +67,14 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       friendName: '',
       friendEmail: '',
       friendAge: MIN_AGE,
-      friendGender: undefined, // Default to undefined, let user select
+      friendGender: undefined, 
       bio: '',
       interests: [], 
       photoUrl: '',
       preferences: {
         ageRange: `${MIN_AGE}-${MIN_AGE + 10}`,
         seeking: [],
-        gender: '', // Gender friend is seeking
+        gender: '', 
         location: `${50} km`,
       },
     },
@@ -81,10 +82,11 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
 
   useEffect(() => {
     if (initialData) {
+      const initialFriendAge = initialData.friendAge || MIN_AGE;
       form.reset({
         friendName: initialData.friendName,
         friendEmail: initialData.friendEmail || '',
-        friendAge: initialData.friendAge || MIN_AGE,
+        friendAge: initialFriendAge,
         friendGender: initialData.friendGender || undefined,
         bio: initialData.bio,
         interests: initialData.interests.join(', '), 
@@ -92,10 +94,11 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         preferences: {
           ageRange: initialData.preferences?.ageRange || `${MIN_AGE}-${MIN_AGE+10}`,
           seeking: initialData.preferences?.seeking || [],
-          gender: initialData.preferences?.gender || '', // Gender friend is seeking
+          gender: initialData.preferences?.gender || '', 
           location: initialData.preferences?.location || `${50} km`,
         },
       });
+      setCurrentFriendAge(initialFriendAge);
       if (initialData.preferences?.ageRange) {
         const [min, max] = initialData.preferences.ageRange.split('-').map(Number);
         if (!isNaN(min) && !isNaN(max) && min >= MIN_AGE && max <= MAX_AGE && min <=max) {
@@ -113,6 +116,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         friendName: '', friendEmail: '', friendAge: MIN_AGE, friendGender: undefined, bio: '', interests: '', photoUrl: '',
         preferences: { ageRange: `${MIN_AGE}-${MIN_AGE + 10}`, seeking: [], gender: '', location: `${50} km` },
       });
+      setCurrentFriendAge(MIN_AGE);
       setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
       setCurrentProximity(50);
     }
@@ -164,10 +168,18 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                   name="friendAge"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-body">Friend's Age</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 30" {...field} className="font-body bg-card" />
-                      </FormControl>
+                      <FormLabel className="font-body">Friend's Age: {currentFriendAge}</FormLabel>
+                      <Slider
+                        value={[currentFriendAge]}
+                        onValueChange={(newVal) => {
+                          setCurrentFriendAge(newVal[0]);
+                          field.onChange(newVal[0]);
+                        }}
+                        min={MIN_AGE}
+                        max={MAX_AGE}
+                        step={1}
+                        className="py-2"
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -301,7 +313,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 
                 <FormField
                 control={form.control}
-                name="preferences.gender" // This is the gender the friend is *seeking*
+                name="preferences.gender" 
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel className="font-body">Interested In (Gender for Matches)</FormLabel>
@@ -311,7 +323,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         defaultValue={field.value}
                         className="flex flex-col space-y-1"
                         >
-                        {memoizedPreferredGenderOptions.map((option) => ( // Use PREFERRED_GENDER_OPTIONS
+                        {memoizedPreferredGenderOptions.map((option) => ( 
                             <FormItem key={option} className="flex items-center space-x-3 space-y-0">
                             <FormControl>
                                 <RadioGroupItem value={option} />
@@ -363,3 +375,5 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     </Card>
   );
 }
+
+    
