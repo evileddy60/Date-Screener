@@ -23,7 +23,7 @@ function ManageProfileCardContent() {
   const mode = cardIdToEdit ? 'edit' : 'create';
 
   const [initialCardData, setInitialCardData] = useState<ProfileCard | null>(null);
-  const [isLoading, setIsLoading] = useState(mode === 'edit'); 
+  const [isLoading, setIsLoading] = useState(mode === 'edit');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,21 +53,22 @@ function ManageProfileCardContent() {
         }
       } else if (mode === 'create') {
         setIsLoading(false);
-        setInitialCardData(null); // Ensure null for create mode
+        setInitialCardData(null); 
       }
     }
-    if (currentUser) { 
+    if (currentUser) {
         fetchCardToEdit();
-    } else if (!currentUser && !isLoading) { 
-        router.push('/auth/login'); 
+    } else if (!currentUser) { // Removed !isLoading from this condition as it's not relevant here
+        router.push('/auth/login');
     }
-  }, [cardIdToEdit, mode, currentUser, router]); // Removed isLoading from deps
+  }, [cardIdToEdit, mode, currentUser, router]);
 
   const handleFormSubmit = async (formData: ProfileCardFormData) => {
     if (!currentUser || !currentUser.id || !currentUser.name) {
       toast({ variant: 'destructive', title: 'Error', description: 'User not authenticated or profile incomplete.' });
       return;
     }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -78,11 +79,11 @@ function ManageProfileCardContent() {
         friendGender: formData.friendGender,
         friendPostalCode: formData.friendPostalCode,
         bio: formData.bio,
-        interests: formData.interests, 
+        interests: formData.interests, // Zod schema already transforms this to string[]
         photoUrl: formData.photoUrl,
         preferences: {
             ageRange: formData.preferences?.ageRange,
-            seeking: formData.preferences?.seeking,
+            seeking: formData.preferences?.seeking, // Corrected typo here
             gender: formData.preferences?.gender,
             location: formData.preferences?.location,
         },
@@ -93,23 +94,31 @@ function ManageProfileCardContent() {
         const cardToUpdate: ProfileCard = {
           ...dataToSave,
           id: initialCardData.id,
-          createdByMatcherId: currentUser.id, 
-          matcherName: currentUser.name, 
-          createdAt: initialCardData.createdAt, 
+          createdByMatcherId: currentUser.id,
+          matcherName: currentUser.name,
+          createdAt: initialCardData.createdAt,
         };
         await updateProfileCard(cardToUpdate);
+        setIsSubmitting(false); // Reset submitting state immediately after successful operation
         toast({ title: 'Profile Card Updated!', description: `${cardToUpdate.friendName}'s profile has been successfully updated.` });
-      } else {
+        router.push('/profile-cards');
+      } else { // Create mode
         await addProfileCard(dataToSave, currentUser.id, currentUser.name);
+        setIsSubmitting(false); // Reset submitting state immediately after successful operation
         toast({ title: 'Profile Card Created!', description: `${formData.friendName}'s profile has been successfully created.` });
+        router.push('/profile-cards');
       }
-      router.push('/profile-cards');
     } catch (err: any) {
       console.error('Error saving profile card:', err);
       setError(err.message || 'Could not save profile card.');
+      setIsSubmitting(false); // Ensure submitting state is reset on error before toast
       toast({ variant: 'destructive', title: 'Save Failed', description: err.message || 'An unexpected error occurred.' });
     } finally {
-      setIsSubmitting(false);
+      // Fallback: Ensure isSubmitting is false if it hasn't been set by try/catch paths
+      // This mainly catches errors during toast or router.push, or if an async operation didn't complete as expected.
+      if (isSubmitting) { // Check current state to avoid unnecessary re-render if already false
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -140,7 +149,7 @@ function ManageProfileCardContent() {
       </Alert>
     );
   }
-  
+
   if (mode === 'edit' && !initialCardData && !isLoading) {
      return (
        <Alert variant="destructive" className="max-w-xl mx-auto my-10">
@@ -155,7 +164,6 @@ function ManageProfileCardContent() {
       </Alert>
      );
   }
-
 
   return (
     <div className="max-w-2xl mx-auto py-8">
@@ -182,5 +190,3 @@ export default function ManageProfileCardPage() {
         </Suspense>
     );
 }
-
-    

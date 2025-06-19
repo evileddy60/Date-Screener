@@ -77,6 +77,11 @@ export async function addProfileCard(
     console.error("Firestore DB instance is not available for addProfileCard.");
     throw new Error("Database service unavailable. Cannot create profile card.");
   }
+  if (!matcherId || !matcherName) {
+    console.error("addProfileCard called with missing matcherId or matcherName.", { matcherId, matcherName });
+    throw new Error("Critical error: Matcher ID or Name not provided to addProfileCard function.");
+  }
+
   const docRef = await addDoc(collection(db, PROFILE_CARDS_COLLECTION), {
     ...cardData,
     createdByMatcherId: matcherId,
