@@ -139,7 +139,7 @@ function FindMatchesContent() {
                 </div>
             <CardTitle className="font-headline text-3xl text-primary">Finding Matches for {targetProfileCard.friendName}</CardTitle>
             <CardDescription className="font-body text-foreground/80">
-                Our AI is looking for compatible profiles based on {targetProfileCard.friendName}'s details.
+                Our system is looking for compatible profiles based on {targetProfileCard.friendName}'s details.
             </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
@@ -159,7 +159,7 @@ function FindMatchesContent() {
             {isLoading && ( // This is for the AI matching process loading
                 <div className="flex flex-col items-center justify-center py-10 space-y-3">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="font-body text-lg text-muted-foreground">AI is searching for potential matches...</p>
+                <p className="font-body text-lg text-muted-foreground">System is searching for potential matches...</p>
                 <p className="font-body text-sm text-muted-foreground/80">This might take a few moments.</p>
                 </div>
             )}
@@ -177,7 +177,7 @@ function FindMatchesContent() {
                 <Gift className="h-4 w-4 text-secondary-foreground" />
                 <AlertTitle className="font-headline">No New Matches Found</AlertTitle>
                 <AlertDescription className="font-body">
-                    The AI couldn't find any new suitable matches for {targetProfileCard.friendName} at this time from the available profile cards.
+                    The system couldn't find any new suitable matches for {targetProfileCard.friendName} at this time from the available profile cards.
                     This could be due to specific preferences or a limited pool of other cards.
                     More cards from other matchers might yield results later!
                 </AlertDescription>
@@ -186,7 +186,7 @@ function FindMatchesContent() {
 
             {!isLoading && !error && suggestedMatches.length > 0 && (
                 <div className="space-y-6">
-                <h2 className="font-headline text-2xl text-foreground text-center">AI's Top Suggestions for {targetProfileCard.friendName}</h2>
+                <h2 className="font-headline text-2xl text-foreground text-center">System's Top Suggestions for {targetProfileCard.friendName}</h2>
                 <div className="grid md:grid-cols-2 gap-6">
                     {suggestedMatches.map(pm => {
                     const matchedCard = allProfileCards.find(pc => pc.id === (pm.profileCardAId === targetProfileCardId ? pm.profileCardBId : pm.profileCardAId));
@@ -217,7 +217,7 @@ function FindMatchesContent() {
                             {pm.compatibilityReason && (
                             <Alert variant="default" className="bg-primary/5 border-primary/10 text-xs p-2">
                                     <Info className="h-3 w-3 text-primary/80" />
-                                    <AlertTitle className="font-semibold text-primary/80 text-xs">AI Note</AlertTitle>
+                                    <AlertTitle className="font-semibold text-primary/80 text-xs">System Note</AlertTitle>
                                     <AlertDescription className="text-foreground/80 line-clamp-2">{pm.compatibilityReason}</AlertDescription>
                                 </Alert>
                             )}
