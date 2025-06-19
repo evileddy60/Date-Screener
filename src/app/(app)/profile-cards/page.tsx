@@ -3,12 +3,11 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProfileCardsByMatcher, deleteProfileCard } from '@/lib/firestoreService'; // Removed addProfileCard, updateProfileCard
+import { getProfileCardsByMatcher, deleteProfileCard } from '@/lib/firestoreService';
 import type { ProfileCard as ProfileCardType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ProfileCardDisplay } from '@/components/profile-cards/ProfileCardDisplay';
-// Removed CreateEditProfileCardModal import
-import { Loader2, PlusCircle, UserX, BookOpen, Trash2, AlertTriangleIcon } from 'lucide-react';
+import { Loader2, PlusCircle, UserX, BookOpen, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
@@ -25,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 
-const MAX_PROFILE_CARDS_LIMIT = 5;
+// Removed MAX_PROFILE_CARDS_LIMIT
 
 export default function ProfileCardsPage() {
   const { currentUser, isLoading: authLoading } = useAuth();
@@ -33,7 +32,6 @@ export default function ProfileCardsPage() {
   const { toast } = useToast();
   const [myProfileCards, setMyProfileCards] = useState<ProfileCardType[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  // Removed modal state: isModalOpen, editingProfileCard
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [cardToDeleteId, setCardToDeleteId] = useState<string | null>(null);
@@ -65,14 +63,6 @@ export default function ProfileCardsPage() {
   }, [currentUser, authLoading, router, toast]);
 
   const handleNavigateToCreate = () => {
-    if (myProfileCards.length >= MAX_PROFILE_CARDS_LIMIT) {
-      toast({
-        variant: "destructive",
-        title: "Profile Card Limit Reached",
-        description: `You can only create up to ${MAX_PROFILE_CARDS_LIMIT} profile cards. Please delete an existing card to add a new one.`,
-      });
-      return;
-    }
     router.push('/profile-cards/manage');
   };
 
@@ -133,34 +123,21 @@ export default function ProfileCardsPage() {
    );
  }
 
-  const canCreateMoreCards = myProfileCards.length < MAX_PROFILE_CARDS_LIMIT;
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="text-center sm:text-left">
             <h1 className="font-headline text-4xl font-semibold text-primary">My Profile Cards</h1>
-             <p className="font-body text-muted-foreground">You have created {myProfileCards.length} of {MAX_PROFILE_CARDS_LIMIT} allowed profile cards.</p>
+             <p className="font-body text-muted-foreground">You have created {myProfileCards.length} profile card{myProfileCards.length === 1 ? '' : 's'}. Create as many as you need!</p>
         </div>
         <Button
-          onClick={handleNavigateToCreate} // Changed handler
+          onClick={handleNavigateToCreate}
           className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md"
-          disabled={!canCreateMoreCards}
-          title={!canCreateMoreCards ? `You have reached the limit of ${MAX_PROFILE_CARDS_LIMIT} profile cards.` : "Create a new profile card for a friend"}
+          title={"Create a new profile card for a friend"}
         >
           <PlusCircle className="mr-2 h-5 w-5" /> Create New Profile Card
         </Button>
       </div>
-
-      {!canCreateMoreCards && myProfileCards.length > 0 && (
-        <Alert variant="default" className="bg-yellow-500/10 border-yellow-600/30 text-yellow-700">
-          <AlertTriangleIcon className="h-4 w-4 !text-yellow-600" />
-          <AlertTitle className="font-headline !text-yellow-700">Profile Card Limit Reached</AlertTitle>
-          <AlertDescription className="!text-yellow-700/90">
-            You have reached the maximum of {MAX_PROFILE_CARDS_LIMIT} profile cards. To create a new one, please delete an existing card.
-          </AlertDescription>
-        </Alert>
-      )}
 
       {myProfileCards.length === 0 ? (
         <Card className="text-center py-12">
@@ -183,15 +160,13 @@ export default function ProfileCardsPage() {
             <ProfileCardDisplay
                 key={card.id}
                 profileCard={card}
-                onEdit={() => handleNavigateToEdit(card.id)} // Changed handler
+                onEdit={() => handleNavigateToEdit(card.id)}
                 onFindMatch={() => handleFindMatch(card.id)}
                 onDeleteRequest={() => handleOpenDeleteDialog(card.id)}
             />
           ))}
         </div>
       )}
-
-      {/* Removed CreateEditProfileCardModal component instance */}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
