@@ -4,8 +4,8 @@
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet'; // Added SheetHeader, SheetTitle
-import { Home, UserCircle, Users, LogOut, LogIn, UserPlus, BookUser, Sparkles, Menu } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Home, UserCircle, Users, LogOut, LogIn, UserPlus, BookUser, Sparkles, Menu, Info } from 'lucide-react'; // Added Info
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { USER_ROLES } from '@/lib/constants';
@@ -100,6 +100,7 @@ export function Navbar() {
       {renderLink("/profile-cards", BookUser, "Profile Cards", isSheet)}
       {renderLink("/potential-matches", Users, "Review Matches", isSheet)}
       {renderLink("/profile", UserCircle, "My Profile & Settings", isSheet)}
+      {renderLink("/about", Info, "About", isSheet)} 
       {renderLogoutButton(isSheet)}
     </>
   );
@@ -116,6 +117,7 @@ export function Navbar() {
             </Link>
         </Button>
       )}
+       {renderLink("/about", Info, "About Date Screener", isSheet)}
     </>
   );
 

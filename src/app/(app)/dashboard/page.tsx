@@ -191,13 +191,7 @@ export default function DashboardPage() {
               description="Profiles from other matchmakers."
               isLoading={isLoadingStats}
             />
-            <StatItemDisplay 
-              icon={Info} 
-              title="How To Use" 
-              value="Guide"
-              description="Create cards, find matches, review!"
-              isLoading={false} 
-            />
+            {/* "How To Use" StatItemDisplay removed */}
           </CardContent>
         </Card>
       </section>
@@ -238,5 +232,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
