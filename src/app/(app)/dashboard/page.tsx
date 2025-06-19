@@ -191,7 +191,6 @@ export default function DashboardPage() {
               description="Profiles from other matchmakers."
               isLoading={isLoadingStats}
             />
-            {/* "How To Use" StatItemDisplay removed */}
           </CardContent>
         </Card>
       </section>
@@ -209,7 +208,7 @@ export default function DashboardPage() {
             href="/potential-matches" 
             icon={Users} 
             title="Review Matches" 
-            description="Review and approve/reject AI-suggested matches between profile cards." 
+            description="Review and approve/reject system-suggested matches between profile cards." 
             count={pendingReviewCount}
             isLoadingCount={isLoadingStats}
           />
@@ -232,3 +231,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
