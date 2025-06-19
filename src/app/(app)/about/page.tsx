@@ -23,7 +23,7 @@ export default function AboutPage() {
           <section>
             <h2 className="font-headline text-2xl text-primary mb-2 flex items-center gap-2"><Sparkles className="h-6 w-6"/>What is Date Screener?</h2>
             <p>
-              Date Screener is a unique platform designed for <strong className="text-primary">Matchmakers</strong> (that's you!) to help your single friends find meaningful connections. 
+              Date Screener is a unique platform designed for <strong className="text-primary">Matchmakers</strong> (that's you!) to help your single friends find meaningful connections.
               Instead of your friends swiping endlessly, you thoughtfully create profiles for them, highlighting their best qualities and what they're looking for.
               Our system then helps you discover potential matches with friends of other Matchmakers on the platform.
             </p>
@@ -33,13 +33,13 @@ export default function AboutPage() {
             <h2 className="font-headline text-2xl text-primary mb-2 flex items-center gap-2"><BookUser className="h-6 w-6"/>How to Use Date Screener: Your Guide</h2>
             <ol className="list-decimal list-inside space-y-3 pl-4">
               <li>
-                <strong className="text-primary">Create Profile Cards for Your Friends:</strong> Navigate to "Profile Cards" from the menu. Here, you'll craft detailed profiles for your single friends. Include their bio, interests, photos, and preferences for a potential partner. The more detail, the better the AI can assist!
+                <strong className="text-primary">Create Profile Cards for Your Friends:</strong> Navigate to "Profile Cards" from the menu. Here, you'll craft detailed profiles for your single friends. Include their bio, interests, photos, and preferences for a potential partner. The more detail, the better our system can assist!
               </li>
               <li>
-                <strong className="text-primary">Find Potential Matches:</strong> Once a Profile Card is created, use the "Find Match for [Friend's Name]" button on their card. Our AI system will analyze other Profile Cards in the network (created by other Matchmakers) and suggest potential compatible pairings.
+                <strong className="text-primary">Find Potential Matches:</strong> Once a Profile Card is created, use the "Find Match for [Friend's Name]" button on their card. Our system will analyze other Profile Cards in the network (created by other Matchmakers) and suggest potential compatible pairings.
               </li>
               <li>
-                <strong className="text-primary">Review Match Suggestions:</strong> Go to "Review Matches". Here you'll see the AI's suggestions, showing your friend's card alongside a potential match's card. You'll see why the AI thought they might be a good fit.
+                <strong className="text-primary">Review Match Suggestions:</strong> Go to "Review Matches". Here you'll see the system's suggestions, showing your friend's card alongside a potential match's card. You'll see why the system thought they might be a good fit.
               </li>
               <li>
                 <strong className="text-primary">Matcher Approval:</strong> You and the Matchmaker of the other friend will independently decide to "Approve" or "Decline" the suggested pairing for your respective friends.
