@@ -27,7 +27,7 @@ const ProfileCardPromptSchema = z.object({
   friendPostalCode: z.string().optional().describe("The Canadian postal code of the friend (e.g., M5V2T6). This is the reference for their location preference."),
   bio: z.string(),
   interests: z.array(z.string()),
-  photoUrl: z.string().optional().describe("A URL to the friend's photo. This might be an HTTP/HTTPS URL or a Base64 encoded Data URI. If it's a Data URI, it can be used with {{media url=photoDataUri}}."),
+  photoUrl: z.string().optional().describe("An HTTP/HTTPS URL to the friend's photo. This can be used with {{media url=photoUrl}}."),
   preferences: z.object({
     ageRange: z.string().optional().describe("The preferred age range for a match, e.g., '25-35'."),
     seeking: z.string().optional().describe("What the friend is seeking in a match, e.g., 'Long-term relationship, Companionship'."), 
@@ -79,7 +79,7 @@ const prompt = ai.definePrompt({
   3.  **Location Compatibility**: Each card may have a 'friendPostalCode' (e.g., M5V2T6) and a 'preferences.location' (e.g., 'within 50 km'). The 'preferences.location' indicates a desired search radius FROM THEIR OWN POSTAL CODE. While you cannot calculate exact distances, give higher compatibility if their postal codes and preferred proximities suggest they could realistically meet. For instance, two cards with Toronto postal codes (e.g., 'M5W1E6' and 'M4P2G2') and '20 km' preferences are more compatible location-wise than a Toronto card and a Vancouver card if both have '20 km' preferences. If postal codes are missing, rely on the stated 'preferences.location' more generally, assuming it's from a meaningful (but unspecified) anchor point.
   4.  **Mutual Preferences**: Consider stated preferences for 'seeking' (relationship goals).
   5.  **Shared Interests & Bio**: Look for common interests and complementary personality traits described in their bios.
-  6.  **Visual Impression (If Photo Provided)**: If a photo is provided (via photoUrl, which might be a Data URI), consider if it gives a compatible impression with the other profile's description and photo (if available). Use {{media url=photoUrl}} to reference the photo if it's a Data URI.
+  6.  **Visual Impression (If Photo Provided)**: If a photo is provided (via photoUrl, which will be an HTTP/HTTPS URL), consider if it gives a compatible impression with the other profile's description and photo (if available). Use {{media url=photoUrl}} to reference the photo.
 
   For each potential match, assign a compatibility score out of 100 and explain your reasoning in 2-3 sentences. Present the matches as a ranked list from most to least compatible.
 

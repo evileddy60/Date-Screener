@@ -14,9 +14,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Save, X, ImagePlus, Trash2 } from 'lucide-react';
+import { Save, X, ImagePlus, Trash2, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription as ShadCardDescription } from '@/components/ui/card';
-import Image from 'next/image'; // For image preview
+import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { storage } from '@/lib/firebase'; // Import Firebase storage instance
+import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage'; // Firebase storage functions
 
 const SEEKING_OPTIONS = ["Long-term relationship", "Companionship", "Friendship", "Casual dating", "Marriage", "Prefer not to say"];
 const MIN_AGE = 18;
@@ -40,7 +44,7 @@ export const profileCardFormSchema = z.object({
     .optional().or(z.literal('')),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
-  photoUrl: z.string().optional().or(z.literal('')), // Will store Data URI or existing URL
+  photoUrl: z.string().optional().or(z.literal('')), // Will store Firebase Storage URL or existing URL
   preferences: z.object({
     ageRange: z.string()
       .refine(val => !val || /^\d{1,2}-\d{1,2}$/.test(val), { message: "Age range must be in 'min-max' format (e.g., '25-35') or empty."})
@@ -63,12 +67,19 @@ interface ProfileCardFormProps {
   isSubmitting?: boolean;
 }
 
-export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmitting }: ProfileCardFormProps) {
+export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmitting: parentIsSubmitting }: ProfileCardFormProps) {
   const [currentAgeRange, setCurrentAgeRange] = useState<[number, number]>([MIN_AGE, MIN_AGE + 10]);
   const [currentFriendAge, setCurrentFriendAge] = useState<number>(MIN_AGE);
   const [currentProximity, setCurrentProximity] = useState<number>(50);
+  
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false); // New state for image upload
+  
+  const { currentUser } = useAuth();
+  const { toast } = useToast();
+
 
   const form = useForm<ProfileCardFormData>({
     resolver: zodResolver(profileCardFormSchema),
@@ -90,23 +101,11 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     },
   });
 
-  const { reset, setValue, watch } = form;
-  const watchedPhotoUrl = watch('photoUrl');
+  const { reset, setValue, watch, setError: setFormError, clearErrors: clearFormErrors } = form;
+  const watchedPhotoUrl = watch('photoUrl'); // This is the URL that will be saved
 
   useEffect(() => {
-    if (watchedPhotoUrl && watchedPhotoUrl.startsWith('data:image')) {
-      setImagePreview(watchedPhotoUrl);
-      setFileName("Uploaded image");
-    } else if (watchedPhotoUrl) {
-      setImagePreview(watchedPhotoUrl); // It's an existing URL
-      setFileName(null); // No new file name for existing URLs
-    } else {
-      setImagePreview(null);
-      setFileName(null);
-    }
-  }, [watchedPhotoUrl]);
-
-  useEffect(() => {
+    // This effect is for initializing the form with initialData
     let newDefaultValues: ProfileCardFormData;
 
     if (initialData && mode === 'edit') {
@@ -129,12 +128,12 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       
       setCurrentFriendAge(newDefaultValues.friendAge);
       if (newDefaultValues.photoUrl) {
-        setImagePreview(newDefaultValues.photoUrl);
+        setImagePreview(newDefaultValues.photoUrl); // Display existing Firebase Storage URL
       } else {
         setImagePreview(null);
       }
+      setSelectedImageFile(null); // No new file selected initially on edit
       setFileName(null);
-
 
       const ageRangePref = newDefaultValues.preferences.ageRange;
       let parsedMinAgeSlider = MIN_AGE;
@@ -181,6 +180,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
       setCurrentProximity(50);
       setImagePreview(null);
+      setSelectedImageFile(null);
       setFileName(null);
     }
     reset(newDefaultValues);
@@ -194,34 +194,93 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > MAX_FILE_SIZE_BYTES) {
-        form.setError("photoUrl", { type: "manual", message: `File size cannot exceed ${MAX_FILE_SIZE_MB}MB.` });
+        setFormError("photoUrl", { type: "manual", message: `File size cannot exceed ${MAX_FILE_SIZE_MB}MB.` });
         return;
       }
       if (!file.type.startsWith('image/')) {
-        form.setError("photoUrl", { type: "manual", message: "Invalid file type. Please select an image." });
+        setFormError("photoUrl", { type: "manual", message: "Invalid file type. Please select an image." });
         return;
       }
 
-      form.clearErrors("photoUrl");
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setValue('photoUrl', reader.result as string, { shouldDirty: true, shouldValidate: true });
-        setImagePreview(reader.result as string);
-        setFileName(file.name);
-      };
-      reader.readAsDataURL(file);
+      clearFormErrors("photoUrl");
+      setSelectedImageFile(file);
+      setImagePreview(URL.createObjectURL(file)); // Create a temporary URL for preview
+      setFileName(file.name);
+      setValue('photoUrl', 'new_image_selected', { shouldDirty: true }); // Mark form dirty, actual URL set on submit
     }
   };
 
   const handleRemoveImage = () => {
-    setValue('photoUrl', '', { shouldDirty: true, shouldValidate: true });
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview); // Revoke temporary blob URL
+    }
     setImagePreview(null);
+    setSelectedImageFile(null);
     setFileName(null);
+    setValue('photoUrl', '', { shouldDirty: true, shouldValidate: true }); // Clear the photoUrl field
     const fileInput = document.getElementById('photoUrlInput') as HTMLInputElement | null;
     if (fileInput) {
-        fileInput.value = ''; // Reset the file input
+        fileInput.value = ''; 
     }
   };
+
+  const internalHandleSubmit = async (formData: ProfileCardFormData) => {
+    if (!currentUser || !storage) {
+        toast({ variant: "destructive", title: "Error", description: "User not authenticated or storage service unavailable." });
+        return;
+    }
+    setIsUploadingImage(true); // Indicate overall submission process including potential upload
+
+    let finalPhotoUrl = initialData?.photoUrl || ''; // Start with existing URL or empty
+
+    if (selectedImageFile) { // User selected a new image
+        try {
+            // Delete old image if it exists and a new one is being uploaded
+            if (mode === 'edit' && initialData?.photoUrl && initialData.photoUrl.includes('firebasestorage.googleapis.com')) {
+                try {
+                    const oldImageRef = storageRef(storage, initialData.photoUrl);
+                    await deleteObject(oldImageRef);
+                } catch (deleteError: any) {
+                     // Non-critical, log and continue. Maybe the old URL was invalid or permissions changed.
+                    console.warn("Could not delete old image from Firebase Storage:", deleteError);
+                }
+            }
+            
+            const filePath = `profileCardImages/${currentUser.id}/${Date.now()}_${selectedImageFile.name}`;
+            const imageStorageRef = storageRef(storage, filePath);
+            const uploadTask = await uploadBytesResumable(imageStorageRef, selectedImageFile);
+            finalPhotoUrl = await getDownloadURL(uploadTask.ref);
+        } catch (uploadError: any) {
+            console.error('Error uploading image to Firebase Storage:', uploadError);
+            toast({ variant: 'destructive', title: 'Image Upload Failed', description: uploadError.message || 'Could not upload the image.' });
+            setIsUploadingImage(false);
+            return; // Stop submission if image upload fails
+        }
+    } else if (watchedPhotoUrl === '' && initialData?.photoUrl) {
+        // Image was explicitly removed by the user
+        finalPhotoUrl = '';
+        // Optionally, delete the old image from Firebase Storage if it was a Firebase Storage URL
+        if (mode === 'edit' && initialData?.photoUrl && initialData.photoUrl.includes('firebasestorage.googleapis.com')) {
+            try {
+                const oldImageRef = storageRef(storage, initialData.photoUrl);
+                await deleteObject(oldImageRef);
+            } catch (deleteError: any) {
+                console.warn("Could not delete old image from Firebase Storage during removal:", deleteError);
+            }
+        }
+    }
+    // If no new file and not removed, finalPhotoUrl remains initialData.photoUrl (already set)
+
+    const dataToSubmit: ProfileCardFormData = {
+        ...formData,
+        photoUrl: finalPhotoUrl,
+    };
+    
+    await onSubmit(dataToSubmit); // Call the parent onSubmit
+    setIsUploadingImage(false); // Reset after successful submission via parent
+  };
+
+  const combinedIsSubmitting = parentIsSubmitting || isUploadingImage;
 
 
   return (
@@ -236,7 +295,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         </CardHeader>
         <CardContent>
             <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(internalHandleSubmit)} className="space-y-6">
                 <FormField
                 control={form.control}
                 name="friendName"
@@ -354,6 +413,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                             accept="image/*" 
                             onChange={handleImageChange} 
                             className="font-body bg-card"
+                            disabled={combinedIsSubmitting}
                         />
                     </FormControl>
                     <FormDescription className="font-body text-xs">
@@ -363,16 +423,18 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                     {imagePreview && (
                         <div className="mt-2 relative w-40 h-40 border rounded-md overflow-hidden">
                             <Image src={imagePreview} alt="Selected preview" layout="fill" objectFit="cover" data-ai-hint="person profile image"/>
-                            <Button 
-                                type="button" 
-                                variant="destructive" 
-                                size="icon" 
-                                onClick={handleRemoveImage}
-                                className="absolute top-1 right-1 h-6 w-6"
-                                title="Remove image"
-                            >
-                                <Trash2 className="h-3 w-3" />
-                            </Button>
+                            {!combinedIsSubmitting && (
+                              <Button 
+                                  type="button" 
+                                  variant="destructive" 
+                                  size="icon" 
+                                  onClick={handleRemoveImage}
+                                  className="absolute top-1 right-1 h-6 w-6"
+                                  title="Remove image"
+                              >
+                                  <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
                         </div>
                     )}
                      <FormMessage>{form.formState.errors.photoUrl?.message}</FormMessage>
@@ -398,6 +460,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                             max={MAX_AGE}
                             step={1}
                             className="py-2"
+                            disabled={combinedIsSubmitting}
                         />
                     </FormControl>
                     <FormMessage />
@@ -432,6 +495,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                                             )
                                         );
                                     }}
+                                    disabled={combinedIsSubmitting}
                                 />
                                 </FormControl>
                                 <FormLabel className="font-body font-normal text-sm">
@@ -462,7 +526,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         {memoizedPreferredGenderOptions.map((option) => (
                             <FormItem key={option} className="flex items-center space-x-2 space-y-0">
                             <FormControl>
-                                <RadioGroupItem value={option} />
+                                <RadioGroupItem value={option} disabled={combinedIsSubmitting}/>
                             </FormControl>
                             <FormLabel className="font-body font-normal text-sm">{option}</FormLabel>
                             </FormItem>
@@ -491,6 +555,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                             max={MAX_PROXIMITY}
                             step={PROXIMITY_STEP}
                             className="py-2"
+                            disabled={combinedIsSubmitting}
                         />
                     </FormControl>
                      <FormDescription className="font-body text-xs">How far from their postal code they're willing to match.</FormDescription>
@@ -500,11 +565,11 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 />
 
                 <div className="flex justify-between pt-8">
-                <Button type="button" variant="outline" onClick={onCancel} className="border-muted text-muted-foreground hover:bg-muted/20" disabled={isSubmitting}>
+                <Button type="button" variant="outline" onClick={onCancel} className="border-muted text-muted-foreground hover:bg-muted/20" disabled={combinedIsSubmitting}>
                     <X className="mr-2 h-4 w-4" /> Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting || !form.formState.isDirty || !form.formState.isValid} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                    {isSubmitting ? <Save className="mr-2 h-4 w-4 animate-pulse" /> : <Save className="mr-2 h-4 w-4" />}
+                <Button type="submit" disabled={combinedIsSubmitting || !form.formState.isDirty || !form.formState.isValid} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                    {combinedIsSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     {mode === 'edit' ? 'Save Changes' : 'Create Profile Card'}
                 </Button>
                 </div>
@@ -514,4 +579,3 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     </Card>
   );
 }
-
