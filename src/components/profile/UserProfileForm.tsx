@@ -149,7 +149,7 @@ export function UserProfileForm({ profile, onSubmit }: UserProfileFormProps) {
                             <SelectValue placeholder="Select who can see your profile cards" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="w-[var(--radix-select-trigger-width)]"> 
                           <SelectItem value="recommenders_only">Only Other Matchmakers</SelectItem>
                           <SelectItem value="network_only">Matchmakers in My Network (Future Feature)</SelectItem>
                           <SelectItem value="private">Private (Invite Only - Future Feature)</SelectItem>
