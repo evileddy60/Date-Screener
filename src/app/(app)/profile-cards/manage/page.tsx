@@ -58,7 +58,7 @@ function ManageProfileCardContent() {
     }
     if (currentUser) {
         fetchCardToEdit();
-    } else if (!currentUser) { // Removed !isLoading from this condition as it's not relevant here
+    } else if (!currentUser) { 
         router.push('/auth/login');
     }
   }, [cardIdToEdit, mode, currentUser, router]);
@@ -78,12 +78,14 @@ function ManageProfileCardContent() {
         friendAge: formData.friendAge,
         friendGender: formData.friendGender,
         friendPostalCode: formData.friendPostalCode,
+        educationLevel: formData.educationLevel,
+        occupation: formData.occupation,
         bio: formData.bio,
-        interests: formData.interests, // Zod schema already transforms this to string[]
+        interests: formData.interests, 
         photoUrl: formData.photoUrl,
         preferences: {
             ageRange: formData.preferences?.ageRange,
-            seeking: formData.preferences?.seeking, // Corrected typo here
+            seeking: formData.preferences?.seeking, 
             gender: formData.preferences?.gender,
             location: formData.preferences?.location,
         },
@@ -99,24 +101,22 @@ function ManageProfileCardContent() {
           createdAt: initialCardData.createdAt,
         };
         await updateProfileCard(cardToUpdate);
-        setIsSubmitting(false); // Reset submitting state immediately after successful operation
+        setIsSubmitting(false); 
         toast({ title: 'Profile Card Updated!', description: `${cardToUpdate.friendName}'s profile has been successfully updated.` });
         router.push('/profile-cards');
-      } else { // Create mode
+      } else { 
         await addProfileCard(dataToSave, currentUser.id, currentUser.name);
-        setIsSubmitting(false); // Reset submitting state immediately after successful operation
+        setIsSubmitting(false); 
         toast({ title: 'Profile Card Created!', description: `${formData.friendName}'s profile has been successfully created.` });
         router.push('/profile-cards');
       }
     } catch (err: any) {
       console.error('Error saving profile card:', err);
       setError(err.message || 'Could not save profile card.');
-      setIsSubmitting(false); // Ensure submitting state is reset on error before toast
+      setIsSubmitting(false); 
       toast({ variant: 'destructive', title: 'Save Failed', description: err.message || 'An unexpected error occurred.' });
     } finally {
-      // Fallback: Ensure isSubmitting is false if it hasn't been set by try/catch paths
-      // This mainly catches errors during toast or router.push, or if an async operation didn't complete as expected.
-      if (isSubmitting) { // Check current state to avoid unnecessary re-render if already false
+      if (isSubmitting) { 
         setIsSubmitting(false);
       }
     }

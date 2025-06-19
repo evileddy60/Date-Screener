@@ -6,7 +6,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { ProfileCard } from '@/types';
-import { FRIEND_GENDER_OPTIONS, PREFERRED_GENDER_OPTIONS } from '@/types';
+import { FRIEND_GENDER_OPTIONS, PREFERRED_GENDER_OPTIONS, EDUCATION_LEVEL_OPTIONS } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +14,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Save, X, ImagePlus, Trash2, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select
+import { Save, X, ImagePlus, Trash2, Loader2, Briefcase, GraduationCap } from 'lucide-react'; // Added icons
 import { Card, CardContent, CardHeader, CardTitle, CardDescription as ShadCardDescription } from '@/components/ui/card';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,6 +43,8 @@ export const profileCardFormSchema = z.object({
     .regex(canadianPostalCodeRegex, "Invalid Canadian Postal Code format (e.g., A1A 1A1 or M5V2T6).")
     .transform(val => val.toUpperCase().replace(/[ -]/g, ''))
     .optional().or(z.literal('')),
+  educationLevel: z.enum([...EDUCATION_LEVEL_OPTIONS, ""] as const, {errorMap: () => ({ message: "Please select an education level or leave blank." }) }).optional(),
+  occupation: z.string().max(100, "Occupation cannot exceed 100 characters.").optional().or(z.literal('')),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
   photoUrl: z.string().optional().or(z.literal('')),
@@ -88,6 +91,8 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       friendAge: MIN_AGE,
       friendGender: undefined, 
       friendPostalCode: '',
+      educationLevel: '',
+      occupation: '',
       bio: '',
       interests: '', 
       photoUrl: '',
@@ -112,6 +117,8 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         friendAge: initialData.friendAge || MIN_AGE,
         friendGender: initialData.friendGender || undefined,
         friendPostalCode: initialData.friendPostalCode || '',
+        educationLevel: initialData.educationLevel || '',
+        occupation: initialData.occupation || '',
         bio: initialData.bio || '',
         interests: Array.isArray(initialData.interests) ? initialData.interests.join(', ') : (initialData.interests || ''),
         photoUrl: initialData.photoUrl || '',
@@ -159,6 +166,8 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         friendAge: MIN_AGE,
         friendGender: undefined,
         friendPostalCode: '',
+        educationLevel: '',
+        occupation: '',
         bio: '',
         interests: '',
         photoUrl: '',
@@ -182,6 +191,8 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
   const memoizedSeekingOptions = useMemo(() => SEEKING_OPTIONS, []);
   const memoizedFriendGenderOptions = useMemo(() => FRIEND_GENDER_OPTIONS, []);
   const memoizedPreferredGenderOptions = useMemo(() => PREFERRED_GENDER_OPTIONS, []);
+  const memoizedEducationLevelOptions = useMemo(() => EDUCATION_LEVEL_OPTIONS, []);
+
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -199,7 +210,6 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       setSelectedImageFile(file);
       setImagePreview(URL.createObjectURL(file));
       setFileName(file.name);
-      // Use a unique placeholder based on file info to ensure RHF detects change for `isDirty`
       setValue('photoUrl', `placeholder_for_new_file_${file.name}_${file.lastModified}`, { shouldDirty: true });
     }
   };
@@ -212,7 +222,6 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     setSelectedImageFile(null);
     setFileName(null);
     setValue('photoUrl', '', { shouldDirty: true, shouldValidate: true });
-    // Reset the native file input's value
     const fileInput = document.getElementById('photoUrlInput') as HTMLInputElement | null;
     if (fileInput) {
         fileInput.value = ''; 
@@ -250,9 +259,8 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
             return;
         }
     } else if (formData.photoUrl === '' && initialData?.photoUrl && initialData.photoUrl.includes('firebasestorage.googleapis.com')) {
-        // Image was explicitly removed by the user, and there was an old image in storage
         finalPhotoUrl = '';
-        if (mode === 'edit') { // Only delete if editing an existing card
+        if (mode === 'edit') { 
             try {
                 const oldImageRef = storageRef(storage, initialData.photoUrl);
                 await deleteObject(oldImageRef);
@@ -371,6 +379,43 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                       </FormItem>
                   )}
                 />
+
+                <FormField
+                    control={form.control}
+                    name="educationLevel"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="font-body flex items-center gap-1"><GraduationCap className="w-4 h-4 text-primary" />Friend's Highest Education Level (Optional)</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl>
+                            <SelectTrigger className="font-body bg-card">
+                                <SelectValue placeholder="Select education level" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value="">-- Select --</SelectItem>
+                            {memoizedEducationLevelOptions.map(option => (
+                                <SelectItem key={option} value={option}>{option}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="occupation"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="font-body flex items-center gap-1"><Briefcase className="w-4 h-4 text-primary"/>Friend's Occupation (Optional)</FormLabel>
+                        <FormControl><Input placeholder="e.g., Software Engineer, Teacher, Artist" {...field} className="font-body bg-card" /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
                 <FormField
                 control={form.control}
                 name="bio"

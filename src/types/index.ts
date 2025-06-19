@@ -29,6 +29,18 @@ export interface UserProfile { // This is now the Matcher's profile
 
 export const FRIEND_GENDER_OPTIONS = ["Man", "Woman", "Other"] as const;
 export const PREFERRED_GENDER_OPTIONS = ["Men", "Women", "Other"] as const; // Gender options someone is interested in
+export const EDUCATION_LEVEL_OPTIONS = [
+    "No formal education",
+    "High School Diploma or GED",
+    "Some College (No Degree)",
+    "Associate Degree",
+    "Bachelor's Degree",
+    "Master's Degree",
+    "Doctorate (Ph.D., M.D., J.D., etc.)",
+    "Trade/Vocational School",
+    "Prefer not to say"
+] as const;
+
 
 export interface ProfileCard { // Profile of a single friend, created by a Matcher
   id: string;
@@ -39,6 +51,8 @@ export interface ProfileCard { // Profile of a single friend, created by a Match
   friendAge?: number; // Actual age of the friend
   friendGender?: typeof FRIEND_GENDER_OPTIONS[number]; // Friend's own gender
   friendPostalCode?: string; // Friend's Canadian Postal Code (e.g., "A1A1A1" or "A1A 1A1")
+  educationLevel?: typeof EDUCATION_LEVEL_OPTIONS[number] | ""; // Added
+  occupation?: string; // Added (e.g., "Software Engineer", "Teacher")
   bio: string;
   interests: string[];
   photoUrl?: string;

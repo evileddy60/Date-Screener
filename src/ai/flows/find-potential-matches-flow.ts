@@ -17,6 +17,7 @@ import {
   addPotentialMatch 
 } from '@/lib/firestoreService';
 import type { ProfileCard, PotentialMatch } from '@/types';
+import { EDUCATION_LEVEL_OPTIONS } from '@/types';
 
 
 const ProfileCardPromptSchema = z.object({
@@ -25,6 +26,8 @@ const ProfileCardPromptSchema = z.object({
   friendAge: z.number().optional().describe("The actual age of the friend this profile card represents. May not be present for older cards."),
   friendGender: z.enum(["Man", "Woman", "Other"]).optional().describe("The gender of the friend this profile card represents."),
   friendPostalCode: z.string().optional().describe("The Canadian postal code of the friend (e.g., M5V2T6). This is the reference for their location preference."),
+  educationLevel: z.enum([...EDUCATION_LEVEL_OPTIONS, ""] as const).optional().describe("The highest education level achieved by the friend."),
+  occupation: z.string().optional().describe("The friend's current or most recent occupation or field of work."),
   bio: z.string(),
   interests: z.array(z.string()),
   photoUrl: z.string().optional().describe("An HTTP/HTTPS URL to the friend's photo. This can be used with {{media url=photoUrl}}."),
@@ -77,9 +80,10 @@ const prompt = ai.definePrompt({
   1.  **Age Compatibility**: The 'friendAge' of one card should ideally fall within the 'ageRange' specified in the preferences of the other card, and vice-versa. If a card's 'friendAge' is not provided, this aspect cannot be strictly assessed for that card. The 'ageRange' preference is a string like "min-max".
   2.  **Gender Compatibility**: The 'friendGender' of one card must align with the 'gender' preference (gender sought) of the other card, and vice-versa. For example, if Target Card's friend is "Woman" and they are seeking "Men", a Candidate Card's friend should be "Man". If a preference or friend's gender is "Other" or not provided, be more flexible but prioritize stated preferences.
   3.  **Location Compatibility**: Each card may have a 'friendPostalCode' (e.g., M5V2T6) and a 'preferences.location' (e.g., 'within 50 km'). The 'preferences.location' indicates a desired search radius FROM THEIR OWN POSTAL CODE. While you cannot calculate exact distances, give higher compatibility if their postal codes and preferred proximities suggest they could realistically meet. For instance, two cards with Toronto postal codes (e.g., 'M5W1E6' and 'M4P2G2') and '20 km' preferences are more compatible location-wise than a Toronto card and a Vancouver card if both have '20 km' preferences. If postal codes are missing, rely on the stated 'preferences.location' more generally, assuming it's from a meaningful (but unspecified) anchor point.
-  4.  **Mutual Preferences**: Consider stated preferences for 'seeking' (relationship goals).
-  5.  **Shared Interests & Bio**: Look for common interests and complementary personality traits described in their bios.
-  6.  **Visual Impression (If Photo Provided)**: If a photo is provided (via photoUrl, which will be an HTTP/HTTPS URL), consider if it gives a compatible impression with the other profile's description and photo (if available). Use {{media url=photoUrl}} to reference the photo.
+  4.  **Education & Occupation**: Consider the 'educationLevel' and 'occupation' fields. While direct matches aren't always necessary, think about potential for shared experiences, lifestyle alignment, or intellectual compatibility. For example, two individuals with advanced degrees in similar fields might have more in common, or someone in a demanding profession might pair well with someone understanding of such a lifestyle. Do not penalize if this information is not provided.
+  5.  **Mutual Preferences**: Consider stated preferences for 'seeking' (relationship goals).
+  6.  **Shared Interests & Bio**: Look for common interests and complementary personality traits described in their bios.
+  7.  **Visual Impression (If Photo Provided)**: If a photo is provided (via photoUrl, which will be an HTTP/HTTPS URL), consider if it gives a compatible impression with the other profile's description and photo (if available). Use {{media url=photoUrl}} to reference the photo.
 
   For each potential match, assign a compatibility score out of 100 and explain your reasoning in 2-3 sentences. Present the matches as a ranked list from most to least compatible.
 
@@ -89,6 +93,8 @@ const prompt = ai.definePrompt({
   Actual Age: {{#if targetCard.friendAge}}{{{targetCard.friendAge}}}{{else}}Not Provided{{/if}}
   Gender: {{#if targetCard.friendGender}}{{{targetCard.friendGender}}}{{else}}Not Provided{{/if}}
   Postal Code: {{#if targetCard.friendPostalCode}}{{{targetCard.friendPostalCode}}}{{else}}Not Provided{{/if}}
+  Education: {{#if targetCard.educationLevel}}{{{targetCard.educationLevel}}}{{else}}Not Provided{{/if}}
+  Occupation: {{#if targetCard.occupation}}{{{targetCard.occupation}}}{{else}}Not Provided{{/if}}
   Bio: {{{targetCard.bio}}}
   Interests: {{#each targetCard.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
   {{#if targetCard.photoUrl}}Photo: {{media url=targetCard.photoUrl}} {{/if}}
@@ -105,6 +111,8 @@ const prompt = ai.definePrompt({
     Actual Age: {{#if this.friendAge}}{{{this.friendAge}}}{{else}}Not Provided{{/if}}
     Gender: {{#if this.friendGender}}{{{this.friendGender}}}{{else}}Not Provided{{/if}}
     Postal Code: {{#if this.friendPostalCode}}{{{this.friendPostalCode}}}{{else}}Not Provided{{/if}}
+    Education: {{#if this.educationLevel}}{{{this.educationLevel}}}{{else}}Not Provided{{/if}}
+    Occupation: {{#if this.occupation}}{{{this.occupation}}}{{else}}Not Provided{{/if}}
     Bio: {{{this.bio}}}
     Interests: {{#each this.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
     {{#if this.photoUrl}}Photo: {{media url=this.photoUrl}} {{/if}}
@@ -156,6 +164,8 @@ const findPotentialMatchesFlow = ai.defineFlow(
         friendAge: targetCardFull.friendAge,
         friendGender: targetCardFull.friendGender as "Man" | "Woman" | "Other" | undefined,
         friendPostalCode: targetCardFull.friendPostalCode,
+        educationLevel: targetCardFull.educationLevel as typeof EDUCATION_LEVEL_OPTIONS[number] | "" | undefined,
+        occupation: targetCardFull.occupation,
         bio: targetCardFull.bio,
         interests: targetCardFull.interests,
         photoUrl: targetCardFull.photoUrl,
@@ -170,6 +180,8 @@ const findPotentialMatchesFlow = ai.defineFlow(
         friendAge: card.friendAge,
         friendGender: card.friendGender as "Man" | "Woman" | "Other" | undefined,
         friendPostalCode: card.friendPostalCode,
+        educationLevel: card.educationLevel as typeof EDUCATION_LEVEL_OPTIONS[number] | "" | undefined,
+        occupation: card.occupation,
         bio: card.bio,
         interests: card.interests,
         photoUrl: card.photoUrl,
