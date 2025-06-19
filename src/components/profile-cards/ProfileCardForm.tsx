@@ -68,7 +68,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
 
   const form = useForm<ProfileCardFormData>({
     resolver: zodResolver(profileCardFormSchema),
-    defaultValues: { // Initial defaults for create mode or before data loads for edit
+    defaultValues: { 
       friendName: '',
       friendEmail: '',
       friendAge: MIN_AGE,
@@ -96,7 +96,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         friendName: initialData.friendName || '',
         friendEmail: initialData.friendEmail || '',
         friendAge: initialData.friendAge || MIN_AGE,
-        friendGender: initialData.friendGender || undefined, // Will be undefined if not set on old card
+        friendGender: initialData.friendGender || undefined,
         friendPostalCode: initialData.friendPostalCode || '',
         bio: initialData.bio || '',
         interests: Array.isArray(initialData.interests) ? initialData.interests.join(', ') : (initialData.interests || ''),
@@ -104,7 +104,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         preferences: {
           ageRange: initialData.preferences?.ageRange || `${MIN_AGE}-${MIN_AGE + 10}`,
           seeking: Array.isArray(initialData.preferences?.seeking) ? initialData.preferences.seeking : [],
-          gender: initialData.preferences?.gender || '', // Defaults to empty string if not set
+          gender: initialData.preferences?.gender || '', 
           location: initialData.preferences?.location || `${50} km`,
         },
       };
@@ -135,7 +135,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       }
       setCurrentProximity(parsedProximitySlider);
 
-    } else { // Create mode, or initialData is not yet available
+    } else { 
       newDefaultValues = {
         friendName: '',
         friendEmail: '',
@@ -232,7 +232,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         <FormControl>
                             <RadioGroup
                             onValueChange={field.onChange}
-                            value={field.value} // Use value for controlled component
+                            value={field.value || ''} 
                             className="flex flex-row space-x-4 items-center pt-1"
                             >
                             {memoizedFriendGenderOptions.map((option) => (
@@ -373,7 +373,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                     <FormControl>
                         <RadioGroup
                         onValueChange={field.onChange}
-                        value={field.value} // Use value for controlled component
+                        value={field.value || ''} 
                         className="flex flex-row space-x-4 items-center pt-1"
                         >
                         {memoizedPreferredGenderOptions.map((option) => (
@@ -431,5 +431,3 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     </Card>
   );
 }
-
-    
