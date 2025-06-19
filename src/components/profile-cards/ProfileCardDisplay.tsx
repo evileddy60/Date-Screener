@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Info, Edit, Search, CalendarDays, AtSign, Heart, MapPin, UsersIcon, Trash2, Cake } from 'lucide-react'; 
+import { User, Info, Edit, Search, CalendarDays, AtSign, Heart, MapPin, UsersIcon, Trash2, Cake, VenetianMask } from 'lucide-react'; // Added VenetianMask for Gender
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { mockUserProfiles } from '@/lib/mockData'; 
@@ -54,11 +54,18 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteR
                     <AtSign className="w-3 h-3"/> {profileCard.friendEmail}
                 </CardDescription>
              )}
-             {profileCard.friendAge && (
-                <CardDescription className="font-body text-xs text-foreground/60 flex items-center gap-1 mt-0.5">
-                    <Cake className="w-3 h-3"/> Age: {profileCard.friendAge}
-                </CardDescription>
-             )}
+             <div className="flex flex-wrap gap-x-2">
+                {profileCard.friendAge && (
+                    <CardDescription className="font-body text-xs text-foreground/60 flex items-center gap-1 mt-0.5">
+                        <Cake className="w-3 h-3"/> Age: {profileCard.friendAge}
+                    </CardDescription>
+                )}
+                {profileCard.friendGender && (
+                    <CardDescription className="font-body text-xs text-foreground/60 flex items-center gap-1 mt-0.5">
+                        <VenetianMask className="w-3 h-3"/> Gender: {profileCard.friendGender}
+                    </CardDescription>
+                )}
+             </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-1">
@@ -90,8 +97,8 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteR
                 }
               </p>
             )}
-            {profileCard.preferences.gender && (
-              <p className="flex items-center gap-1"><UsersIcon className="w-3 h-3 text-primary/70"/> Gender: {profileCard.preferences.gender}</p>
+            {profileCard.preferences.gender && ( // This is the GENDER THEY ARE SEEKING
+              <p className="flex items-center gap-1"><UsersIcon className="w-3 h-3 text-primary/70"/> Interested in: {profileCard.preferences.gender}</p>
             )}
             {profileCard.preferences.location && (
               <p className="flex items-center gap-1"><MapPin className="w-3 h-3 text-primary/70"/> Location: {profileCard.preferences.location}</p>

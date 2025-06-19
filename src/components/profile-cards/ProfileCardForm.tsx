@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { ProfileCard } from '@/types';
+import { FRIEND_GENDER_OPTIONS } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,18 +19,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription as ShadCardDe
 
 
 const SEEKING_OPTIONS = ["Long-term relationship", "Companionship", "Friendship", "Casual dating", "Marriage", "Prefer not to say"];
-const GENDER_OPTIONS = ["Men", "Women", "Other"]; // "Non-binary" or more specific options could be added
+const PREFERRED_GENDER_OPTIONS = ["Men", "Women", "Other"]; // Gender friend is seeking
 const MIN_AGE = 18;
 const MAX_AGE = 99;
 const MIN_PROXIMITY = 0;
 const MAX_PROXIMITY = 250; // km
 const PROXIMITY_STEP = 5; // km
 
-// This schema should be consistent with what `CreateEditProfileCardModal` used.
 export const profileCardFormSchema = z.object({
   friendName: z.string().min(2, "Friend's name must be at least 2 characters."),
   friendEmail: z.string().email("Invalid email address for friend.").optional().or(z.literal('')),
   friendAge: z.coerce.number().min(18, "Age must be 18 or older.").max(99, "Age must be 99 or younger."),
+  friendGender: z.enum(FRIEND_GENDER_OPTIONS, { required_error: "Please select your friend's gender."}),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
   photoUrl: z.string().url("Invalid URL format for photo.").optional().or(z.literal('')),
@@ -38,7 +39,7 @@ export const profileCardFormSchema = z.object({
       .refine(val => !val || /^\d{1,2}-\d{1,2}$/.test(val), { message: "Age range must be in 'min-max' format (e.g., '25-35') or empty."})
       .optional().or(z.literal('')),
     seeking: z.array(z.string()).optional().default([]),
-    gender: z.enum([...GENDER_OPTIONS, ""] as const).optional(),
+    gender: z.enum([...PREFERRED_GENDER_OPTIONS, ""] as const).optional(), // Gender friend is seeking
     location: z.string()
       .refine(val => !val || /^\d+ km$/.test(val), { message: "Proximity must be in 'X km' format (e.g., '50 km') or empty."})
       .optional().or(z.literal('')),
@@ -48,7 +49,7 @@ export const profileCardFormSchema = z.object({
 export type ProfileCardFormData = z.infer<typeof profileCardFormSchema>;
 
 interface ProfileCardFormProps {
-  initialData?: ProfileCard | null; // Used for pre-filling the form in edit mode
+  initialData?: ProfileCard | null; 
   onSubmit: (data: ProfileCardFormData) => Promise<void>;
   onCancel: () => void;
   mode: 'create' | 'edit';
@@ -65,13 +66,14 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       friendName: '',
       friendEmail: '',
       friendAge: MIN_AGE,
+      friendGender: undefined, // Default to undefined, let user select
       bio: '',
-      interests: [], // Will be a string in the form input
+      interests: [], 
       photoUrl: '',
       preferences: {
         ageRange: `${MIN_AGE}-${MIN_AGE + 10}`,
         seeking: [],
-        gender: '',
+        gender: '', // Gender friend is seeking
         location: `${50} km`,
       },
     },
@@ -83,13 +85,14 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         friendName: initialData.friendName,
         friendEmail: initialData.friendEmail || '',
         friendAge: initialData.friendAge || MIN_AGE,
+        friendGender: initialData.friendGender || undefined,
         bio: initialData.bio,
-        interests: initialData.interests.join(', '), // Convert array to comma-separated string for input
+        interests: initialData.interests.join(', '), 
         photoUrl: initialData.photoUrl || '',
         preferences: {
           ageRange: initialData.preferences?.ageRange || `${MIN_AGE}-${MIN_AGE+10}`,
           seeking: initialData.preferences?.seeking || [],
-          gender: initialData.preferences?.gender || '',
+          gender: initialData.preferences?.gender || '', // Gender friend is seeking
           location: initialData.preferences?.location || `${50} km`,
         },
       });
@@ -106,9 +109,8 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         }
       }
     } else {
-      // Reset to default for create mode if initialData becomes null/undefined
       form.reset({
-        friendName: '', friendEmail: '', friendAge: MIN_AGE, bio: '', interests: '', photoUrl: '',
+        friendName: '', friendEmail: '', friendAge: MIN_AGE, friendGender: undefined, bio: '', interests: '', photoUrl: '',
         preferences: { ageRange: `${MIN_AGE}-${MIN_AGE + 10}`, seeking: [], gender: '', location: `${50} km` },
       });
       setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
@@ -117,7 +119,9 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
   }, [initialData, form]);
 
   const memoizedSeekingOptions = useMemo(() => SEEKING_OPTIONS, []);
-  const memoizedGenderOptions = useMemo(() => GENDER_OPTIONS, []);
+  const memoizedFriendGenderOptions = useMemo(() => FRIEND_GENDER_OPTIONS, []);
+  const memoizedPreferredGenderOptions = useMemo(() => PREFERRED_GENDER_OPTIONS, []);
+
 
   return (
     <Card className="shadow-xl">
@@ -167,6 +171,32 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                       <FormMessage />
                     </FormItem>
                   )}
+                />
+                <FormField
+                    control={form.control}
+                    name="friendGender"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="font-body">Friend's Gender</FormLabel>
+                        <FormControl>
+                            <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex flex-col space-y-1"
+                            >
+                            {memoizedFriendGenderOptions.map((option) => (
+                                <FormItem key={option} className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                    <RadioGroupItem value={option} />
+                                </FormControl>
+                                <FormLabel className="font-body font-normal text-sm">{option}</FormLabel>
+                                </FormItem>
+                            ))}
+                            </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                 />
                 <FormField
                 control={form.control}
@@ -271,7 +301,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 
                 <FormField
                 control={form.control}
-                name="preferences.gender"
+                name="preferences.gender" // This is the gender the friend is *seeking*
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel className="font-body">Interested In (Gender for Matches)</FormLabel>
@@ -281,7 +311,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                         defaultValue={field.value}
                         className="flex flex-col space-y-1"
                         >
-                        {memoizedGenderOptions.map((option) => (
+                        {memoizedPreferredGenderOptions.map((option) => ( // Use PREFERRED_GENDER_OPTIONS
                             <FormItem key={option} className="flex items-center space-x-3 space-y-0">
                             <FormControl>
                                 <RadioGroupItem value={option} />

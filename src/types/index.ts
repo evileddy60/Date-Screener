@@ -27,6 +27,8 @@ export interface UserProfile { // This is now the Matcher's profile
   privacySettings?: PrivacySettingsData;
 }
 
+export const FRIEND_GENDER_OPTIONS = ["Woman", "Man", "Non-binary", "Other", "Prefer not to say"] as const;
+
 export interface ProfileCard { // Profile of a single friend, created by a Matcher
   id: string;
   createdByMatcherId: string;
@@ -34,13 +36,14 @@ export interface ProfileCard { // Profile of a single friend, created by a Match
   friendName: string;
   friendEmail?: string; // For potential future email notifications to the friend
   friendAge?: number; // Actual age of the friend
+  friendGender?: typeof FRIEND_GENDER_OPTIONS[number]; // Friend's own gender
   bio: string;
   interests: string[];
   photoUrl?: string;
   preferences: {
     ageRange?: string; // e.g., "25-35"
     seeking?: string[]; // Changed from string to string[]
-    gender?: string; // e.g., "Men", "Women", "Other"
+    gender?: string; // e.g., "Men", "Women", "Other" - Gender the friend is seeking
     location?: string; // e.g., "50 km"
   };
   createdAt: string; // ISO date string
