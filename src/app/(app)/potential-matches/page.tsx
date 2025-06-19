@@ -105,7 +105,7 @@ export default function PotentialMatchesPage() {
       <div className="text-center">
         <h1 className="font-headline text-4xl font-semibold text-primary">Review Potential Matches</h1>
         <p className="font-body text-lg text-foreground/80 mt-2">
-          Here are the AI-suggested pairings involving your Profile Cards. Review and decide if they're a good fit!
+          Here are the system-suggested pairings involving your Profile Cards. Review and decide if they're a good fit!
         </p>
       </div>
 
@@ -182,7 +182,7 @@ export default function PotentialMatchesPage() {
                    {match.compatibilityReason && (
                      <Alert variant="default" className="bg-primary/5 border-primary/10 text-xs p-3">
                         <Info className="h-4 w-4 text-primary" />
-                        <AlertTitle className="font-semibold text-primary/90 text-sm">AI Note</AlertTitle>
+                        <AlertTitle className="font-semibold text-primary/90 text-sm">System Note</AlertTitle>
                         <AlertDescription className="text-foreground/80 line-clamp-2">{match.compatibilityReason}</AlertDescription>
                         {match.compatibilityScore && <Badge variant="secondary" className="mt-1 text-xs">Score: {match.compatibilityScore}</Badge>}
                     </Alert>
