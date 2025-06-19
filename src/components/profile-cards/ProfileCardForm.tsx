@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { ProfileCard } from '@/types';
@@ -14,9 +14,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Save, X } from 'lucide-react';
+import { Save, X, ImagePlus, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription as ShadCardDescription } from '@/components/ui/card';
-
+import Image from 'next/image'; // For image preview
 
 const SEEKING_OPTIONS = ["Long-term relationship", "Companionship", "Friendship", "Casual dating", "Marriage", "Prefer not to say"];
 const MIN_AGE = 18;
@@ -24,6 +24,8 @@ const MAX_AGE = 99;
 const MIN_PROXIMITY = 0;
 const MAX_PROXIMITY = 250; // km
 const PROXIMITY_STEP = 5; // km
+const MAX_FILE_SIZE_MB = 2;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 const canadianPostalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
 
@@ -38,7 +40,7 @@ export const profileCardFormSchema = z.object({
     .optional().or(z.literal('')),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
-  photoUrl: z.string().url("Invalid URL format for photo.").optional().or(z.literal('')),
+  photoUrl: z.string().optional().or(z.literal('')), // Will store Data URI or existing URL
   preferences: z.object({
     ageRange: z.string()
       .refine(val => !val || /^\d{1,2}-\d{1,2}$/.test(val), { message: "Age range must be in 'min-max' format (e.g., '25-35') or empty."})
@@ -65,6 +67,8 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
   const [currentAgeRange, setCurrentAgeRange] = useState<[number, number]>([MIN_AGE, MIN_AGE + 10]);
   const [currentFriendAge, setCurrentFriendAge] = useState<number>(MIN_AGE);
   const [currentProximity, setCurrentProximity] = useState<number>(50);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   const form = useForm<ProfileCardFormData>({
     resolver: zodResolver(profileCardFormSchema),
@@ -86,7 +90,21 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     },
   });
 
-  const { reset } = form;
+  const { reset, setValue, watch } = form;
+  const watchedPhotoUrl = watch('photoUrl');
+
+  useEffect(() => {
+    if (watchedPhotoUrl && watchedPhotoUrl.startsWith('data:image')) {
+      setImagePreview(watchedPhotoUrl);
+      setFileName("Uploaded image");
+    } else if (watchedPhotoUrl) {
+      setImagePreview(watchedPhotoUrl); // It's an existing URL
+      setFileName(null); // No new file name for existing URLs
+    } else {
+      setImagePreview(null);
+      setFileName(null);
+    }
+  }, [watchedPhotoUrl]);
 
   useEffect(() => {
     let newDefaultValues: ProfileCardFormData;
@@ -110,6 +128,13 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       };
       
       setCurrentFriendAge(newDefaultValues.friendAge);
+      if (newDefaultValues.photoUrl) {
+        setImagePreview(newDefaultValues.photoUrl);
+      } else {
+        setImagePreview(null);
+      }
+      setFileName(null);
+
 
       const ageRangePref = newDefaultValues.preferences.ageRange;
       let parsedMinAgeSlider = MIN_AGE;
@@ -155,6 +180,8 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       setCurrentFriendAge(MIN_AGE);
       setCurrentAgeRange([MIN_AGE, MIN_AGE + 10]);
       setCurrentProximity(50);
+      setImagePreview(null);
+      setFileName(null);
     }
     reset(newDefaultValues);
   }, [initialData, mode, reset]);
@@ -162,6 +189,39 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
   const memoizedSeekingOptions = useMemo(() => SEEKING_OPTIONS, []);
   const memoizedFriendGenderOptions = useMemo(() => FRIEND_GENDER_OPTIONS, []);
   const memoizedPreferredGenderOptions = useMemo(() => PREFERRED_GENDER_OPTIONS, []);
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        form.setError("photoUrl", { type: "manual", message: `File size cannot exceed ${MAX_FILE_SIZE_MB}MB.` });
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        form.setError("photoUrl", { type: "manual", message: "Invalid file type. Please select an image." });
+        return;
+      }
+
+      form.clearErrors("photoUrl");
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setValue('photoUrl', reader.result as string, { shouldDirty: true, shouldValidate: true });
+        setImagePreview(reader.result as string);
+        setFileName(file.name);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setValue('photoUrl', '', { shouldDirty: true, shouldValidate: true });
+    setImagePreview(null);
+    setFileName(null);
+    const fileInput = document.getElementById('photoUrlInput') as HTMLInputElement | null;
+    if (fileInput) {
+        fileInput.value = ''; // Reset the file input
+    }
+  };
 
 
   return (
@@ -284,17 +344,40 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                     </FormItem>
                 )}
                 />
-                <FormField
-                control={form.control}
-                name="photoUrl"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="font-body">Friend's Photo URL (Optional)</FormLabel>
-                    <FormControl><Input type="url" placeholder="https://placehold.co/600x400.png" {...field} className="font-body bg-card" /></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
+
+                <FormItem>
+                    <FormLabel className="font-body">Friend's Photo (Optional)</FormLabel>
+                    <FormControl>
+                        <Input 
+                            id="photoUrlInput"
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleImageChange} 
+                            className="font-body bg-card"
+                        />
+                    </FormControl>
+                    <FormDescription className="font-body text-xs">
+                        Max {MAX_FILE_SIZE_MB}MB. JPG, PNG, GIF, WEBP accepted.
+                        {fileName && <span className="block mt-1">Selected: {fileName}</span>}
+                    </FormDescription>
+                    {imagePreview && (
+                        <div className="mt-2 relative w-40 h-40 border rounded-md overflow-hidden">
+                            <Image src={imagePreview} alt="Selected preview" layout="fill" objectFit="cover" data-ai-hint="person profile image"/>
+                            <Button 
+                                type="button" 
+                                variant="destructive" 
+                                size="icon" 
+                                onClick={handleRemoveImage}
+                                className="absolute top-1 right-1 h-6 w-6"
+                                title="Remove image"
+                            >
+                                <Trash2 className="h-3 w-3" />
+                            </Button>
+                        </div>
+                    )}
+                     <FormMessage>{form.formState.errors.photoUrl?.message}</FormMessage>
+                </FormItem>
+
 
                 <h3 className="font-headline text-xl text-primary pt-4 border-t mt-6">Matching Preferences (Optional)</h3>
 
@@ -338,7 +421,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                             <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                                 <FormControl>
                                 <Checkbox
-                                    checked={field.value?.includes(option)}
+                                    checked={Array.isArray(field.value) && field.value?.includes(option)}
                                     onCheckedChange={(checked) => {
                                     const currentValue = Array.isArray(field.value) ? field.value : [];
                                     return checked
@@ -431,3 +514,4 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     </Card>
   );
 }
+
