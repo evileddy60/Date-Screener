@@ -158,17 +158,25 @@ const findPotentialMatchesFlow = ai.defineFlow(
       return seeking;
     };
 
+    // Defensive function to ensure only valid HTTP/HTTPS URLs are passed to the prompt's media helper.
+    const formatPhotoUrlForPrompt = (url?: string): string | undefined => {
+        if (!url || !url.trim().startsWith('http')) {
+            return undefined;
+        }
+        return url;
+    }
+
     const targetCardPromptData: ProfileCardPrompt = {
         id: targetCardFull.id,
         friendName: targetCardFull.friendName,
         friendAge: targetCardFull.friendAge,
         friendGender: targetCardFull.friendGender as "Man" | "Woman" | "Other" | undefined,
         friendPostalCode: targetCardFull.friendPostalCode,
-        educationLevel: targetCardFull.educationLevel as typeof EDUCATION_LEVEL_OPTIONS[number] | undefined,
+        educationLevel: targetCardFull.educationLevel,
         occupation: targetCardFull.occupation,
         bio: targetCardFull.bio,
         interests: targetCardFull.interests,
-        photoUrl: targetCardFull.photoUrl,
+        photoUrl: formatPhotoUrlForPrompt(targetCardFull.photoUrl),
         preferences: targetCardFull.preferences ? {
             ...targetCardFull.preferences,
             seeking: formatSeekingForPrompt(targetCardFull.preferences.seeking)
@@ -180,11 +188,11 @@ const findPotentialMatchesFlow = ai.defineFlow(
         friendAge: card.friendAge,
         friendGender: card.friendGender as "Man" | "Woman" | "Other" | undefined,
         friendPostalCode: card.friendPostalCode,
-        educationLevel: card.educationLevel as typeof EDUCATION_LEVEL_OPTIONS[number] | undefined,
+        educationLevel: card.educationLevel,
         occupation: card.occupation,
         bio: card.bio,
         interests: card.interests,
-        photoUrl: card.photoUrl,
+        photoUrl: formatPhotoUrlForPrompt(card.photoUrl),
         preferences: card.preferences ? {
             ...card.preferences,
             seeking: formatSeekingForPrompt(card.preferences.seeking)
