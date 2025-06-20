@@ -30,7 +30,6 @@ const ProfileCardPromptSchema = z.object({
   occupation: z.string().optional().describe("The friend's current or most recent occupation or field of work."),
   bio: z.string(),
   interests: z.array(z.string()),
-  photoUrl: z.string().optional().describe("An HTTP/HTTPS URL to the friend's photo. This can be used with {{media url=photoUrl}}."),
   preferences: z.object({
     ageRange: z.string().optional().describe("The preferred age range for a match, e.g., '25-35'."),
     seeking: z.string().optional().describe("What the friend is seeking in a match, e.g., 'Long-term relationship, Companionship'."), 
@@ -83,7 +82,6 @@ const prompt = ai.definePrompt({
   4.  **Education & Occupation**: Consider the 'educationLevel' and 'occupation' fields. While direct matches aren't always necessary, think about potential for shared experiences, lifestyle alignment, or intellectual compatibility. For example, two individuals with advanced degrees in similar fields might have more in common, or someone in a demanding profession might pair well with someone understanding of such a lifestyle. Do not penalize if this information is not provided.
   5.  **Mutual Preferences**: Consider stated preferences for 'seeking' (relationship goals).
   6.  **Shared Interests & Bio**: Look for common interests and complementary personality traits described in their bios.
-  7.  **Visual Impression (If Photo Provided)**: If a photo is provided (via photoUrl, which will be an HTTP/HTTPS URL), consider if it gives a compatible impression with the other profile's description and photo (if available). Use {{media url=photoUrl}} to reference the photo.
 
   For each potential match, assign a compatibility score out of 100 and explain your reasoning in 2-3 sentences. Present the matches as a ranked list from most to least compatible.
 
@@ -97,7 +95,6 @@ const prompt = ai.definePrompt({
   Occupation: {{#if targetCard.occupation}}{{{targetCard.occupation}}}{{else}}Not Provided{{/if}}
   Bio: {{{targetCard.bio}}}
   Interests: {{#each targetCard.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-  {{#if targetCard.photoUrl}}Photo: {{media url=targetCard.photoUrl}} {{/if}}
   Preferences for a Match:
     Preferred Age Range: {{{targetCard.preferences.ageRange}}}
     Seeking: {{{targetCard.preferences.seeking}}}
@@ -115,7 +112,6 @@ const prompt = ai.definePrompt({
     Occupation: {{#if this.occupation}}{{{this.occupation}}}{{else}}Not Provided{{/if}}
     Bio: {{{this.bio}}}
     Interests: {{#each this.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-    {{#if this.photoUrl}}Photo: {{media url=this.photoUrl}} {{/if}}
     Preferences for a Match:
       Preferred Age Range: {{{this.preferences.ageRange}}}
       Seeking: {{{this.preferences.seeking}}}
@@ -158,14 +154,6 @@ const findPotentialMatchesFlow = ai.defineFlow(
       return seeking;
     };
 
-    // Defensive function to ensure only valid HTTP/HTTPS URLs are passed to the prompt's media helper.
-    const formatPhotoUrlForPrompt = (url?: string | null): string | undefined => {
-        if (typeof url === 'string' && url.trim().startsWith('http')) {
-            return url.trim();
-        }
-        return undefined;
-    }
-
     const targetCardPromptData: ProfileCardPrompt = {
         id: targetCardFull.id,
         friendName: targetCardFull.friendName,
@@ -176,7 +164,6 @@ const findPotentialMatchesFlow = ai.defineFlow(
         occupation: targetCardFull.occupation,
         bio: targetCardFull.bio,
         interests: targetCardFull.interests,
-        photoUrl: formatPhotoUrlForPrompt(targetCardFull.photoUrl),
         preferences: targetCardFull.preferences ? {
             ...targetCardFull.preferences,
             seeking: formatSeekingForPrompt(targetCardFull.preferences.seeking)
@@ -192,7 +179,6 @@ const findPotentialMatchesFlow = ai.defineFlow(
         occupation: card.occupation,
         bio: card.bio,
         interests: card.interests,
-        photoUrl: formatPhotoUrlForPrompt(card.photoUrl),
         preferences: card.preferences ? {
             ...card.preferences,
             seeking: formatSeekingForPrompt(card.preferences.seeking)
@@ -264,3 +250,5 @@ const findPotentialMatchesFlow = ai.defineFlow(
     return { createdPotentialMatchIds };
   }
 );
+
+    
