@@ -161,7 +161,7 @@ const findPotentialMatchesFlow = ai.defineFlow(
     // Defensive function to ensure only valid HTTP/HTTPS URLs are passed to the prompt's media helper.
     const formatPhotoUrlForPrompt = (url?: string | null): string | undefined => {
         if (typeof url === 'string' && url.trim().startsWith('http')) {
-            return url;
+            return url.trim();
         }
         return undefined;
     }
