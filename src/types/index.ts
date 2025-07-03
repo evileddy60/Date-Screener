@@ -51,7 +51,7 @@ export interface ProfileCard { // Profile of a single friend, created by a Match
   friendAge?: number; // Actual age of the friend
   friendGender?: typeof FRIEND_GENDER_OPTIONS[number]; // Friend's own gender
   friendPostalCode?: string; // Friend's Canadian Postal Code (e.g., "A1A1A1" or "A1A 1A1")
-  educationLevel?: typeof EDUCATION_LEVEL_OPTIONS[number]; // Changed from `... | ""`
+  educationLevel?: typeof EDUCATION_LEVEL_OPTIONS[number];
   occupation?: string; // Added (e.g., "Software Engineer", "Teacher")
   bio: string;
   interests: string[];
@@ -62,6 +62,7 @@ export interface ProfileCard { // Profile of a single friend, created by a Match
     gender?: typeof PREFERRED_GENDER_OPTIONS[number] | ""; // e.g., "Men", "Women", "Other" - Gender the friend is seeking
     location?: string; // e.g., "within 50 km" - This is relative to friendPostalCode
   };
+  matchStatus?: 'available' | 'matched';
   createdAt: string; // ISO date string
 }
 
@@ -71,12 +72,12 @@ export interface PotentialMatch { // Represents a potential match between two Pr
   profileCardBId: string; // ID of the second ProfileCard
   matcherAId: string; // Matcher who owns ProfileCardA
   matcherBId: string; // Matcher who owns ProfileCardB
-  compatibilityScore?: number; // Optional: from AI
-  compatibilityReason?: string; // Optional: from AI
+  compatibilityScore?: number; // Optional: from system
+  compatibilityReason?: string; // Optional: from system
   statusMatcherA: 'pending' | 'accepted' | 'rejected';
   statusMatcherB: 'pending' | 'accepted' | 'rejected';
-  statusFriendA?: 'pending' | 'accepted' | 'rejected'; // If Matchers accept, then friend is notified
-  statusFriendB?: 'pending' | 'accepted' | 'rejected';
+  statusFriendA: 'pending' | 'accepted' | 'rejected'; // If Matchers accept, then friend is notified
+  statusFriendB: 'pending' | 'accepted' | 'rejected';
   friendEmailSent?: boolean; // Tracks if the introduction email has been sent (or simulated)
   createdAt: string; // ISO date string
   updatedAt?: string;
@@ -95,3 +96,4 @@ export interface MatchFeedback {
     
 
     
+

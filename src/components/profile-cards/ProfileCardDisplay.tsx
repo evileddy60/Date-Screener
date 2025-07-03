@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Info, Edit, Search, CalendarDays, AtSign, Heart, MapPin, UsersIcon, Trash2, Cake, VenetianMask, Home, GraduationCap, Briefcase } from 'lucide-react'; // Added icons
+import { User, Info, Edit, Search, CalendarDays, AtSign, Heart, MapPin, UsersIcon, Trash2, Cake, VenetianMask, Home, GraduationCap, Briefcase, CheckCircle } from 'lucide-react'; // Added CheckCircle
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { mockUserProfiles } from '@/lib/mockData'; 
@@ -33,6 +33,7 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteR
 
   const matcherProfile = mockUserProfiles.find(user => user.id === profileCard.createdByMatcherId);
   const displayMatcherName = matcherProfile?.name || profileCard.matcherName || 'Unknown Matcher';
+  const isMatched = profileCard.matchStatus === 'matched';
 
   return (
     <Card className="shadow-lg hover:shadow-primary/20 transition-all duration-300 flex flex-col h-full">
@@ -83,7 +84,12 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteR
              </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1 items-center">
+            {isMatched && (
+                <Badge variant="default" className="w-fit bg-green-600 hover:bg-green-700 text-white">
+                    <CheckCircle className="mr-1 h-3 w-3" /> Matched
+                </Badge>
+            )}
             {profileCard.interests.slice(0, 3).map(interest => (
                  <Badge key={interest} variant="secondary" className="font-body text-xs bg-accent/70 text-accent-foreground capitalize">{interest}</Badge>
             ))}
@@ -127,20 +133,18 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteR
             <CalendarDays className="w-3 h-3" /> Created {formatDistanceToNow(new Date(profileCard.createdAt), { addSuffix: true })}
             </p>
             <div className="flex gap-2">
-              <Button onClick={onEdit} size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
+              <Button onClick={onEdit} size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary/10" disabled={isMatched} title={isMatched ? 'Cannot edit a matched profile' : 'Edit profile'}>
                   <Edit className="mr-2 h-4 w-4" /> Edit
               </Button>
-              <Button onClick={handleDeleteClick} size="sm" variant="destructive" className="bg-destructive/90 hover:bg-destructive text-destructive-foreground">
+              <Button onClick={handleDeleteClick} size="sm" variant="destructive" className="bg-destructive/90 hover:bg-destructive text-destructive-foreground" disabled={isMatched} title={isMatched ? 'Cannot delete a matched profile' : 'Delete profile'}>
                   <Trash2 className="mr-2 h-4 w-4" /> Delete
               </Button>
             </div>
         </div>
-        <Button onClick={handleFindMatchClick} size="sm" variant="default" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow hover:shadow-md transition-all">
-          <Search className="mr-2 h-4 w-4" /> Find Match for {profileCard.friendName}
+        <Button onClick={handleFindMatchClick} size="sm" variant="default" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow hover:shadow-md transition-all" disabled={isMatched} title={isMatched ? 'This friend has been successfully matched' : `Find a match for ${profileCard.friendName}` }>
+          <Search className="mr-2 h-4 w-4" /> {isMatched ? 'Successfully Matched!' : `Find Match for ${profileCard.friendName}`}
         </Button>
       </CardFooter>
     </Card>
   );
 }
-    
-

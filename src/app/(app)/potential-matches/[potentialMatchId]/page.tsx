@@ -4,14 +4,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getPotentialMatchById, updatePotentialMatch, getProfileCardById } from '@/lib/firestoreService';
-import { mockUserProfiles } from '@/lib/mockData'; 
-import type { PotentialMatch, ProfileCard, UserProfile } from '@/types';
+import { getPotentialMatchById, updatePotentialMatch, getProfileCardById, updateFriendDecision } from '@/lib/firestoreService';
+import type { PotentialMatch, ProfileCard } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, ArrowLeft, UserCircle, Users, ThumbsUp, ThumbsDown, Mail, MessageSquare, CheckCircle, XCircle, Clock, Send } from 'lucide-react';
+import { Loader2, ArrowLeft, Users, ThumbsUp, ThumbsDown, Mail, MessageSquare, CheckCircle, XCircle, Clock, Send, Smile, Frown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +29,7 @@ export default function PotentialMatchDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   useEffect(() => {
     async function fetchMatchDetails() {
@@ -117,7 +117,7 @@ export default function PotentialMatchDetailPage() {
         friendEmailSent: true,
         updatedAt: new Date().toISOString()
     };
-
+    
     // Ensure friend statuses are set to pending if not already decided
     if (potentialMatch.statusFriendA !== 'accepted' && potentialMatch.statusFriendA !== 'rejected') {
         updatedFields.statusFriendA = 'pending';
@@ -126,13 +126,12 @@ export default function PotentialMatchDetailPage() {
         updatedFields.statusFriendB = 'pending';
     }
 
-
     try {
         await updatePotentialMatch({ ...potentialMatch, ...updatedFields } as PotentialMatch);
         setPotentialMatch(prev => prev ? { ...prev, ...updatedFields } as PotentialMatch : null);
         toast({
             title: "Introduction Emails (Simulated) Sent!",
-            description: `Emails would be sent to ${profileCardA.friendName} (via ${profileCardA.friendEmail || 'their contact'}) and ${profileCardB.friendName} (via ${profileCardB.friendEmail || 'their contact'}). Their response status is now pending.`,
+            description: `Emails would be sent to ${profileCardA.friendName} and ${profileCardB.friendName}. Their response status is now pending.`,
             duration: 7000,
         });
     } catch (error) {
@@ -143,10 +142,30 @@ export default function PotentialMatchDetailPage() {
     }
   };
 
+  const handleSimulateFriendResponse = async (friendRole: 'A' | 'B', decision: 'accepted' | 'rejected') => {
+      if (!potentialMatchId || isSimulating) return;
+      setIsSimulating(true);
+
+      try {
+        const updatedMatch = await updateFriendDecision(potentialMatchId, friendRole, decision);
+        setPotentialMatch(updatedMatch);
+        const friendName = friendRole === 'A' ? profileCardA?.friendName : profileCardB?.friendName;
+        toast({
+            title: "Friend Response Simulated",
+            description: `${friendName}'s response has been recorded as '${decision}'.`
+        });
+      } catch (error: any) {
+        console.error("Error simulating friend response:", error);
+        toast({ variant: "destructive", title: "Simulation Failed", description: error.message });
+      } finally {
+        setIsSimulating(false);
+      }
+  };
+
 
   const getInitials = (name?: string) => name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
   
-  const getStatusBadge = (status?: 'pending' | 'accepted' | 'rejected') => {
+  const getStatusBadge = (status: 'pending' | 'accepted' | 'rejected') => {
     if (!status) return <Badge variant="secondary">Unknown</Badge>;
     switch (status) {
       case 'pending': return <Badge variant="outline" className="border-yellow-500 text-yellow-600 bg-yellow-500/10"><Clock className="mr-1 h-3 w-3" />Pending</Badge>;
@@ -185,10 +204,15 @@ export default function PotentialMatchDetailPage() {
   const otherMatcherName = potentialMatch.matcherAId === currentUser.id ? nameMatcherB : nameMatcherA;
 
   const bothMatchersAccepted = potentialMatch.statusMatcherA === 'accepted' && potentialMatch.statusMatcherB === 'accepted';
-  const friendAResponded = potentialMatch.statusFriendA && potentialMatch.statusFriendA !== 'pending';
-  const friendBResponded = potentialMatch.statusFriendB && potentialMatch.statusFriendB !== 'pending';
-  const anyFriendRejected = potentialMatch.statusFriendA === 'rejected' || potentialMatch.statusFriendB === 'rejected';
+  
+  const anyRejection = potentialMatch.statusMatcherA === 'rejected' || potentialMatch.statusMatcherB === 'rejected' || potentialMatch.statusFriendA === 'rejected' || potentialMatch.statusFriendB === 'rejected';
+  
   const bothFriendsAccepted = potentialMatch.statusFriendA === 'accepted' && potentialMatch.statusFriendB === 'accepted';
+  const friendResponsePending = potentialMatch.statusFriendA === 'pending' || potentialMatch.statusFriendB === 'pending';
+  
+  const isMatcherA = currentUser.id === potentialMatch.matcherAId;
+  const isMatcherB = currentUser.id === potentialMatch.matcherBId;
+
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -266,20 +290,20 @@ export default function PotentialMatchDetailPage() {
             <CardContent className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-card rounded-md shadow-sm">
                     <div>
-                        <p className="font-semibold text-foreground">{currentUser.name} (Your decision for {potentialMatch.matcherAId === currentUser.id ? profileCardA.friendName : profileCardB.friendName})</p>
+                        <p className="font-semibold text-foreground">{currentUser.name} (Your decision for {isMatcherA ? profileCardA.friendName : profileCardB.friendName})</p>
                     </div>
                     {getStatusBadge(currentMatchersDecision)}
                 </div>
                 <div className="flex justify-between items-center p-3 bg-card rounded-md shadow-sm">
                      <div>
-                        <p className="font-semibold text-foreground">{otherMatcherName}'s decision for {potentialMatch.matcherAId === currentUser.id ? profileCardB.friendName : profileCardA.friendName}</p>
+                        <p className="font-semibold text-foreground">{otherMatcherName}'s decision for {isMatcherA ? profileCardB.friendName : profileCardA.friendName}</p>
                     </div>
                     {getStatusBadge(otherMatchersDecision)}
                 </div>
             </CardContent>
           </Card>
 
-          {currentMatchersDecision === 'pending' && !anyFriendRejected && (
+          {currentMatchersDecision === 'pending' && !anyRejection && (
             <div className="text-center space-y-3 pt-4 border-t">
               <p className="font-body text-lg text-foreground">What do you think of this match for your friend?</p>
               <div className="flex justify-center gap-4">
@@ -293,11 +317,11 @@ export default function PotentialMatchDetailPage() {
             </div>
           )}
           
-          {currentMatchersDecision !== 'pending' && !anyFriendRejected && (
+          {currentMatchersDecision !== 'pending' && !anyRejection && (
             <p className="font-body text-center text-muted-foreground italic mt-4">You have already responded to this match suggestion for your friend.</p>
           )}
 
-           {bothMatchersAccepted && !potentialMatch.friendEmailSent && !anyFriendRejected && (
+           {bothMatchersAccepted && !potentialMatch.friendEmailSent && !anyRejection && (
              <Alert variant="default" className="bg-primary/10 border-primary/30 text-primary-foreground">
                 <Send className="h-5 w-5 text-primary" />
                 <AlertTitle className="font-headline text-primary">Both Matchers Approved!</AlertTitle>
@@ -313,15 +337,40 @@ export default function PotentialMatchDetailPage() {
              </Alert>
            )}
 
-            {potentialMatch.friendEmailSent && !anyFriendRejected && !bothFriendsAccepted && (
-                 <Alert variant="default" className="bg-blue-500/10 border-blue-500/30">
-                    <Clock className="h-5 w-5 text-blue-600" />
-                    <AlertTitle className="font-headline text-blue-700">Introduction Emails Sent</AlertTitle>
-                    <AlertDescription className="font-body text-blue-700/90">
-                        Emails have been sent to {profileCardA.friendName} and {profileCardB.friendName}. Waiting for their responses.
-                        (Friend response links and UI are not yet implemented).
-                    </AlertDescription>
-                 </Alert>
+            {potentialMatch.friendEmailSent && !anyRejection && friendResponsePending && (
+                 <Card className="mt-4 bg-blue-500/5">
+                    <CardHeader>
+                        <CardTitle className="font-headline text-blue-700 flex items-center gap-2"><Clock className="w-6 h-6"/>Awaiting Friend Responses</CardTitle>
+                        <CardDescription className="font-body text-blue-700/90">
+                            Introduction emails have been sent. This section allows you to simulate their responses for testing purposes.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {isMatcherA && potentialMatch.statusFriendA === 'pending' && (
+                             <div className="p-3 border rounded-md bg-card space-y-2">
+                                <p className="font-semibold">Simulate response for {profileCardA.friendName}:</p>
+                                <div className="flex gap-2">
+                                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleSimulateFriendResponse('A', 'accepted')} disabled={isSimulating}><Smile className="mr-2 h-4 w-4"/>Simulate Accept</Button>
+                                    <Button size="sm" variant="destructive" onClick={() => handleSimulateFriendResponse('A', 'rejected')} disabled={isSimulating}><Frown className="mr-2 h-4 w-4"/>Simulate Decline</Button>
+                                </div>
+                             </div>
+                        )}
+                        {isMatcherB && potentialMatch.statusFriendB === 'pending' && (
+                             <div className="p-3 border rounded-md bg-card space-y-2">
+                                <p className="font-semibold">Simulate response for {profileCardB.friendName}:</p>
+                                <div className="flex gap-2">
+                                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleSimulateFriendResponse('B', 'accepted')} disabled={isSimulating}><Smile className="mr-2 h-4 w-4"/>Simulate Accept</Button>
+                                    <Button size="sm" variant="destructive" onClick={() => handleSimulateFriendResponse('B', 'rejected')} disabled={isSimulating}><Frown className="mr-2 h-4 w-4"/>Simulate Decline</Button>
+                                </div>
+                             </div>
+                        )}
+                        <div className="text-sm space-y-1 pt-2 border-t">
+                            <p className="font-semibold">Current Friend Responses:</p>
+                            <div className="flex justify-between items-center"><span>{profileCardA.friendName}:</span> {getStatusBadge(potentialMatch.statusFriendA)}</div>
+                            <div className="flex justify-between items-center"><span>{profileCardB.friendName}:</span> {getStatusBadge(potentialMatch.statusFriendB)}</div>
+                        </div>
+                    </CardContent>
+                 </Card>
             )}
             
             {bothFriendsAccepted && (
@@ -330,33 +379,20 @@ export default function PotentialMatchDetailPage() {
                     <AlertTitle className="font-headline text-green-700">It's a Mutual Match!</AlertTitle>
                     <AlertDescription className="font-body">
                         Great news! Both {profileCardA.friendName} and {profileCardB.friendName} have accepted the introduction.
-                        You should now facilitate their contact. (Contact info sharing details are not yet implemented).
+                        You should now facilitate their contact. Both of their profile cards have been marked as 'Matched'.
                     </AlertDescription>
                  </Alert>
             )}
 
-            {anyFriendRejected && (
+            {anyRejection && !bothFriendsAccepted && (
                  <Alert variant="destructive">
                     <XCircle className="h-5 w-5" />
-                    <AlertTitle className="font-headline">Match Declined by Friend</AlertTitle>
+                    <AlertTitle className="font-headline">Match Declined</AlertTitle>
                     <AlertDescription className="font-body">
-                        Unfortunately, one of the friends has chosen not to proceed with this introduction. This match will not go forward.
+                        Unfortunately, someone has chosen not to proceed with this introduction. This match will not go forward.
                     </AlertDescription>
                  </Alert>
             )}
-            
-            {(friendAResponded || friendBResponded) && !anyFriendRejected && !bothFriendsAccepted && (
-                <Card className="mt-4">
-                    <CardHeader><CardTitle className="font-headline text-lg">Friend Responses So Far:</CardTitle></CardHeader>
-                    <CardContent className="text-sm space-y-1">
-                        {friendAResponded && <p>{profileCardA.friendName}'s response: {getStatusBadge(potentialMatch.statusFriendA)}</p>}
-                        {friendBResponded && <p>{profileCardB.friendName}'s response: {getStatusBadge(potentialMatch.statusFriendB)}</p>}
-                        {!friendAResponded && <p>{profileCardA.friendName}'s response: {getStatusBadge('pending')}</p>}
-                        {!friendBResponded && <p>{profileCardB.friendName}'s response: {getStatusBadge('pending')}</p>}
-                    </CardContent>
-                </Card>
-            )}
-
 
         </CardContent>
         <CardFooter className="p-6 bg-muted/30 border-t">

@@ -87,13 +87,15 @@ export async function addProfileCard(
     createdByMatcherId: matcherId,
     matcherName: matcherName,
     createdAt: new Date().toISOString(),
+    matchStatus: 'available',
   });
   return {
     id: docRef.id,
     ...cardData,
     createdByMatcherId: matcherId,
     matcherName: matcherName,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    matchStatus: 'available',
   };
 }
 
@@ -183,6 +185,46 @@ export async function updatePotentialMatch(matchData: PotentialMatch): Promise<v
   });
 }
 
+export async function updateFriendDecision(
+  potentialMatchId: string,
+  friendRole: 'A' | 'B',
+  decision: 'accepted' | 'rejected'
+): Promise<PotentialMatch> {
+  if (!db) { throw new Error("Database service unavailable."); }
+
+  const matchRef = doc(db, POTENTIAL_MATCHES_COLLECTION, potentialMatchId);
+  const matchSnap = await getDoc(matchRef);
+
+  if (!matchSnap.exists()) { throw new Error("Potential match not found."); }
+
+  const potentialMatch = { id: matchSnap.id, ...matchSnap.data() } as PotentialMatch;
+  const batch = writeBatch(db);
+
+  const updatedFields: Partial<PotentialMatch> = {
+    updatedAt: new Date().toISOString(),
+  };
+  if (friendRole === 'A') {
+    updatedFields.statusFriendA = decision;
+  } else {
+    updatedFields.statusFriendB = decision;
+  }
+  batch.update(matchRef, updatedFields);
+
+  const finalStatusA = friendRole === 'A' ? decision : potentialMatch.statusFriendA;
+  const finalStatusB = friendRole === 'B' ? decision : potentialMatch.statusFriendB;
+
+  if (finalStatusA === 'accepted' && finalStatusB === 'accepted') {
+    const cardARef = doc(db, PROFILE_CARDS_COLLECTION, potentialMatch.profileCardAId);
+    const cardBRef = doc(db, PROFILE_CARDS_COLLECTION, potentialMatch.profileCardBId);
+    batch.update(cardARef, { matchStatus: 'matched' });
+    batch.update(cardBRef, { matchStatus: 'matched' });
+  }
+
+  await batch.commit();
+  return { ...potentialMatch, ...updatedFields };
+}
+
+
 export async function getPotentialMatchById(matchId: string): Promise<PotentialMatch | null> {
   if (!db) {
     console.error("Firestore DB instance is not available for getPotentialMatchById.");
@@ -252,7 +294,7 @@ export async function clearProfileCardsCollection(): Promise<void> {
 
 export async function clearPotentialMatchesCollection(): Promise<void> {
   if (!db) { console.error("DB not available for clearPotentialMatchesCollection"); return; }
-  const querySnapshot = await getDocs(collection(db, POTENTIAL_MATCHES_COLLECTION));
+  const querySnapshot = await getDocs(collection(db, POTENTIAL_MATCHES_COLlection));
   const batch = writeBatch(db);
   querySnapshot.docs.forEach(doc => batch.delete(doc.ref));
   await batch.commit();

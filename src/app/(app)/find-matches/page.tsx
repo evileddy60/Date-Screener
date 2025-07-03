@@ -13,7 +13,7 @@ import type { ProfileCard, PotentialMatch, UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Sparkles, ArrowLeft, ArrowRight, Info, Users, Search, Gift, AlertTriangle } from 'lucide-react';
+import { Loader2, Sparkles, ArrowLeft, ArrowRight, Info, Users, Search, Gift, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 
@@ -29,6 +29,7 @@ function FindMatchesContent() {
   const [targetProfileCard, setTargetProfileCard] = useState<ProfileCard | null>(null);
   const [suggestedMatches, setSuggestedMatches] = useState<PotentialMatch[]>([]);
   const [allProfileCards, setAllProfileCards] = useState<ProfileCard[]>([]);
+  const [isAlreadyMatched, setIsAlreadyMatched] = useState(false);
 
 
   useEffect(() => {
@@ -55,6 +56,12 @@ function FindMatchesContent() {
             return;
         }
         setTargetProfileCard(card);
+
+        if (card.matchStatus === 'matched') {
+            setIsAlreadyMatched(true);
+            setIsLoading(false);
+            return;
+        }
 
         // Fetch all profile cards for displaying match details later
         const allCardsFromDb = await getAllProfileCards();
@@ -156,7 +163,17 @@ function FindMatchesContent() {
                     </CardHeader>
                 </Card>
 
-            {isLoading && ( // This is for the AI matching process loading
+            {isAlreadyMatched && (
+                <Alert variant="default" className="bg-green-500/10 border-green-500/30 text-green-700">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <AlertTitle className="font-headline text-green-700">Already Matched!</AlertTitle>
+                    <AlertDescription className="font-body">
+                       {targetProfileCard.friendName} has already been successfully matched. You cannot seek new matches for this profile.
+                    </AlertDescription>
+                 </Alert>
+            )}
+
+            {isLoading && ( // This is for the system matching process loading
                 <div className="flex flex-col items-center justify-center py-10 space-y-3">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 <p className="font-body text-lg text-muted-foreground">System is searching for potential matches...</p>
@@ -164,7 +181,7 @@ function FindMatchesContent() {
                 </div>
             )}
 
-            {!isLoading && error && ( // Error during AI matching
+            {!isLoading && error && ( // Error during system matching
                 <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Matching Error</AlertTitle>
@@ -172,19 +189,19 @@ function FindMatchesContent() {
                 </Alert>
             )}
 
-            {!isLoading && !error && suggestedMatches.length === 0 && (
+            {!isLoading && !error && !isAlreadyMatched && suggestedMatches.length === 0 && (
                 <Alert className="bg-secondary/50 border-secondary">
                 <Gift className="h-4 w-4 text-secondary-foreground" />
                 <AlertTitle className="font-headline">No New Matches Found</AlertTitle>
                 <AlertDescription className="font-body">
                     The system couldn't find any new suitable matches for {targetProfileCard.friendName} at this time from the available profile cards.
                     This could be due to specific preferences or a limited pool of other cards.
-                    More cards from other matchers might yield results later!
+                    More cards from other matchmakers might yield results later!
                 </AlertDescription>
                 </Alert>
             )}
 
-            {!isLoading && !error && suggestedMatches.length > 0 && (
+            {!isLoading && !error && !isAlreadyMatched && suggestedMatches.length > 0 && (
                 <div className="space-y-6">
                 <h2 className="font-headline text-2xl text-foreground text-center">System's Top Suggestions for {targetProfileCard.friendName}</h2>
                 <div className="grid md:grid-cols-2 gap-6">

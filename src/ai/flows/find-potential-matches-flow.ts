@@ -140,12 +140,17 @@ const findPotentialMatchesFlow = ai.defineFlow(
       throw new Error(`Target profile card with ID ${input.targetProfileCardId} not found.`);
     }
 
+    if (targetCardFull.matchStatus === 'matched') {
+        console.log(`Target card ${input.targetProfileCardId} is already matched. No new matches will be sought.`);
+        return { createdPotentialMatchIds: [] };
+    }
+
     const candidateCardsFull = allProfileCardsFromDb.filter(
-      pc => pc.id !== input.targetProfileCardId && pc.createdByMatcherId !== targetCardFull.createdByMatcherId
+      pc => pc.id !== input.targetProfileCardId && pc.createdByMatcherId !== targetCardFull.createdByMatcherId && pc.matchStatus !== 'matched'
     );
 
     if (candidateCardsFull.length === 0) {
-      console.log("No candidate cards found after filtering for different matcher and non-target.");
+      console.log("No candidate cards found after filtering for different matcher, non-target, and 'available' status.");
       return { createdPotentialMatchIds: [] }; 
     }
     
@@ -191,7 +196,7 @@ const findPotentialMatchesFlow = ai.defineFlow(
     });
 
     if (!output || !output.suggestions) {
-      console.warn("AI prompt did not return suggestions or output was null.");
+      console.warn("System prompt did not return suggestions or output was null.");
       return { createdPotentialMatchIds: [] };
     }
 
@@ -199,7 +204,7 @@ const findPotentialMatchesFlow = ai.defineFlow(
 
     for (const suggestion of output.suggestions) {
       if (suggestion.matchedProfileCardId === targetCardFull.id) {
-        console.warn(`AI suggested matching target card ID ${targetCardFull.id} with itself. Skipping.`);
+        console.warn(`System suggested matching target card ID ${targetCardFull.id} with itself. Skipping.`);
         continue; 
       }
 
@@ -210,7 +215,7 @@ const findPotentialMatchesFlow = ai.defineFlow(
       }
 
       if (matchedCardFull.createdByMatcherId === targetCardFull.createdByMatcherId) {
-          console.warn(`AI suggested a match with a card from the same matcher (Target: ${targetCardFull.id}, Matched: ${matchedCardFull.id}, Matcher: ${targetCardFull.createdByMatcherId}). Skipping.`);
+          console.warn(`System suggested a match with a card from the same matcher (Target: ${targetCardFull.id}, Matched: ${matchedCardFull.id}, Matcher: ${targetCardFull.createdByMatcherId}). Skipping.`);
           continue;
       }
       
@@ -250,5 +255,3 @@ const findPotentialMatchesFlow = ai.defineFlow(
     return { createdPotentialMatchIds };
   }
 );
-
-    
