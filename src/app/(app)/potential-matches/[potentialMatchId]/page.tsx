@@ -209,7 +209,7 @@ export default function PotentialMatchDetailPage() {
           {potentialMatch.compatibilityReason && (
             <Alert className="bg-primary/5 border-primary/20">
               <MessageSquare className="h-5 w-5 text-primary" />
-              <AlertTitle className="font-headline text-primary">AI Compatibility Note</AlertTitle>
+              <AlertTitle className="font-headline text-primary">System Compatibility Note</AlertTitle>
               <AlertDescription className="font-body text-foreground/90">{potentialMatch.compatibilityReason}</AlertDescription>
               {potentialMatch.compatibilityScore && (
                 <div className="mt-2">
@@ -369,4 +369,3 @@ export default function PotentialMatchDetailPage() {
     </div>
   );
 }
-
