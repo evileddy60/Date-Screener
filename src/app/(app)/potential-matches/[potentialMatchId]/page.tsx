@@ -5,15 +5,20 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPotentialMatchById, updatePotentialMatch, getProfileCardById, updateFriendDecision } from '@/lib/firestoreService';
+import { generateIntroductionEmail, type GenerateIntroductionEmailOutput } from '@/ai/flows/generate-introduction-email-flow';
 import type { PotentialMatch, ProfileCard } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, ArrowLeft, Users, ThumbsUp, ThumbsDown, Mail, MessageSquare, CheckCircle, XCircle, Clock, Send, Smile, Frown } from 'lucide-react';
+import { Loader2, ArrowLeft, Users, ThumbsUp, ThumbsDown, Mail, MessageSquare, CheckCircle, XCircle, Clock, Send, Smile, Frown, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 
 export default function PotentialMatchDetailPage() {
@@ -30,6 +35,11 @@ export default function PotentialMatchDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+  
+  const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
+  const [generatedEmail, setGeneratedEmail] = useState<{ subject: string; bodyA: string; bodyB: string; } | null>(null);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+
 
   useEffect(() => {
     async function fetchMatchDetails() {
@@ -109,36 +119,43 @@ export default function PotentialMatchDetailPage() {
     }
   };
 
-  const handleSimulateSendEmail = async () => {
-    if (!potentialMatch || isUpdating || !profileCardA || !profileCardB) return;
-    setIsUpdating(true);
-
-    const updatedFields: Partial<PotentialMatch> = {
-        friendEmailSent: true,
-        updatedAt: new Date().toISOString()
-    };
-    
-    // Ensure friend statuses are set to pending if not already decided
-    if (potentialMatch.statusFriendA !== 'accepted' && potentialMatch.statusFriendA !== 'rejected') {
-        updatedFields.statusFriendA = 'pending';
-    }
-    if (potentialMatch.statusFriendB !== 'accepted' && potentialMatch.statusFriendB !== 'rejected') {
-        updatedFields.statusFriendB = 'pending';
-    }
+  const handleGenerateIntroduction = async () => {
+    if (!potentialMatch || !profileCardA || !profileCardB || isGeneratingEmail) return;
+    setIsGeneratingEmail(true);
 
     try {
-        await updatePotentialMatch({ ...potentialMatch, ...updatedFields } as PotentialMatch);
-        setPotentialMatch(prev => prev ? { ...prev, ...updatedFields } as PotentialMatch : null);
-        toast({
-            title: "Introduction Emails (Simulated) Sent!",
-            description: `Emails would be sent to ${profileCardA.friendName} and ${profileCardB.friendName}. Their response status is now pending.`,
-            duration: 7000,
-        });
-    } catch (error) {
-        console.error("Error simulating email send:", error);
-        toast({variant: "destructive", title: "Simulation Failed", description: "Could not update match status for email simulation."});
+      // 1. Generate email content via Genkit flow
+      const result = await generateIntroductionEmail({ potentialMatchId: potentialMatch.id });
+
+      // 2. Personalize the template for each friend
+      const bodyA = result.emailBody
+        .replace(/\[Friend's Name\]/g, profileCardA.friendName)
+        .replace(/\[Other Friend's Name\]/g, profileCardB.friendName);
+      
+      const bodyB = result.emailBody
+        .replace(/\[Friend's Name\]/g, profileCardB.friendName)
+        .replace(/\[Other Friend's Name\]/g, profileCardA.friendName);
+      
+      setGeneratedEmail({ subject: result.subject, bodyA, bodyB });
+      setIsEmailDialogOpen(true); // Open the dialog with the content
+
+      // 3. Update the match status in Firestore to reflect that the introduction process has started
+      const updatedFields: Partial<PotentialMatch> = {
+        friendEmailSent: true,
+        updatedAt: new Date().toISOString(),
+        statusFriendA: 'pending',
+        statusFriendB: 'pending',
+      };
+      await updatePotentialMatch({ ...potentialMatch, ...updatedFields } as PotentialMatch);
+      setPotentialMatch(prev => prev ? { ...prev, ...updatedFields } as PotentialMatch : null);
+
+      toast({ title: "Email Content Generated!", description: "You can now copy the email to send to your friends." });
+
+    } catch (error: any) {
+      console.error("Error generating introduction email:", error);
+      toast({ variant: "destructive", title: "Generation Failed", description: error.message || "Could not generate the introduction email." });
     } finally {
-        setIsUpdating(false);
+      setIsGeneratingEmail(false);
     }
   };
 
@@ -173,6 +190,14 @@ export default function PotentialMatchDetailPage() {
       case 'rejected': return <Badge variant="destructive"><XCircle className="mr-1 h-3 w-3" />Rejected</Badge>;
       default: return <Badge variant="secondary">Unknown</Badge>;
     }
+  };
+
+  const handleCopyToClipboard = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: "Copied!", description: `${fieldName} copied to clipboard.` });
+    }, (err) => {
+      toast({ variant: "destructive", title: "Copy Failed", description: "Could not copy text." });
+    });
   };
 
   if (isLoading) {
@@ -326,12 +351,12 @@ export default function PotentialMatchDetailPage() {
                 <Send className="h-5 w-5 text-primary" />
                 <AlertTitle className="font-headline text-primary">Both Matchers Approved!</AlertTitle>
                 <AlertDescription className="font-body text-foreground/90">
-                    The next step is to send an introductory email to {profileCardA.friendName} and {profileCardB.friendName}.
+                    The next step is to generate an introductory email to {profileCardA.friendName} and {profileCardB.friendName}.
                     This will allow them to privately accept or decline this potential introduction.
                 </AlertDescription>
                 <div className="mt-3">
-                    <Button variant="default" size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleSimulateSendEmail} disabled={isUpdating}>
-                        {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Mail className="mr-2 h-4 w-4" />} (Simulate) Send Introduction Email to Friends
+                    <Button variant="default" size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleGenerateIntroduction} disabled={isGeneratingEmail}>
+                        {isGeneratingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Mail className="mr-2 h-4 w-4" />} Generate & Send Introduction Email
                     </Button>
                 </div>
              </Alert>
@@ -402,6 +427,72 @@ export default function PotentialMatchDetailPage() {
             </p>
         </CardFooter>
       </Card>
+      
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-2xl text-primary">Generated Introduction Email</DialogTitle>
+            <DialogDescription className="font-body">
+              Review and copy the generated email content below to send to your friends. The system has generated a single template; we've personalized it for each recipient.
+            </DialogDescription>
+          </DialogHeader>
+          {generatedEmail && (
+            <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto pr-2">
+              <div className="space-y-2">
+                <Label htmlFor="subject" className="font-semibold">Subject</Label>
+                <div className="relative">
+                  <Input id="subject" value={generatedEmail.subject} readOnly className="pr-10 bg-muted/50"/>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                    onClick={() => handleCopyToClipboard(generatedEmail.subject, "Subject")}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Email for {profileCardA.friendName}</h3>
+                <div className="relative">
+                   <Textarea value={generatedEmail.bodyA} readOnly rows={10} className="bg-muted/50"/>
+                   <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 h-7 w-7 text-muted-foreground"
+                    onClick={() => handleCopyToClipboard(generatedEmail.bodyA, `Email for ${profileCardA.friendName}`)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-semibold text-foreground">Email for {profileCardB.friendName}</h3>
+                <div className="relative">
+                  <Textarea value={generatedEmail.bodyB} readOnly rows={10} className="bg-muted/50" />
+                   <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 h-7 w-7 text-muted-foreground"
+                    onClick={() => handleCopyToClipboard(generatedEmail.bodyB, `Email for ${profileCardB.friendName}`)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+            </div>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

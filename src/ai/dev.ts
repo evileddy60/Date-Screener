@@ -4,3 +4,4 @@ config();
 
 // import '@/ai/flows/match-improvement-suggestions.ts'; // Removed as feature is no longer active
 import '@/ai/flows/find-potential-matches-flow.ts';
+import '@/ai/flows/generate-introduction-email-flow.ts';
