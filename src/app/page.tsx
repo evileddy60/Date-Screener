@@ -50,7 +50,7 @@ export default function HomePage() {
         <div className="bg-card p-6 rounded-xl shadow-lg hover:shadow-primary/20 transition-shadow duration-300">
           <HeartHandshake className="h-12 w-12 text-primary mb-4" />
           <h2 className="font-headline text-2xl font-semibold text-foreground mb-2">Discover Matches</h2>
-          <p className="font-body text-foreground/70">Our AI helps you compare Profile Cards to find promising matches between your friends and friends of other matchmakers.</p>
+          <p className="font-body text-foreground/70">Our System helps you compare Profile Cards to find promising matches between your friends and friends of other matchmakers.</p>
         </div>
         <div className="bg-card p-6 rounded-xl shadow-lg hover:shadow-primary/20 transition-shadow duration-300">
           <Users className="h-12 w-12 text-primary mb-4" />

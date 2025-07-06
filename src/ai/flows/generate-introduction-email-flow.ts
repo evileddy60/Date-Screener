@@ -123,7 +123,7 @@ const generateIntroductionEmailFlow = ai.defineFlow(
     });
 
     if (!output) {
-      throw new Error('The AI did not generate an email. Please try again.');
+      throw new Error('The system did not generate an email. Please try again.');
     }
 
     return output;
