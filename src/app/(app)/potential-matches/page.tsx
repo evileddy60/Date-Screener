@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -148,6 +147,9 @@ export default function PotentialMatchesPage() {
             const otherCard = cardA.createdByMatcherId === currentUser.id ? cardB : cardA;
             const yourStatus = getStatusForMatcher(match, currentUser.id);
             const otherStatus = getOtherMatcherStatus(match, currentUser.id);
+            const yourFriendStatus = yourCard.id === match.profileCardAId ? match.statusFriendA : match.statusFriendB;
+            const otherFriendStatus = otherCard.id === match.profileCardAId ? match.statusFriendA : match.statusFriendB;
+
 
             return (
               <Card key={match.id} className="shadow-lg hover:shadow-primary/20 transition-all duration-300 flex flex-col">
@@ -191,6 +193,17 @@ export default function PotentialMatchesPage() {
                     <div className="flex justify-between items-center"><span>Your Decision:</span> {getStatusBadge(yourStatus)}</div>
                     <div className="flex justify-between items-center"><span>Other Matcher's Decision:</span> {getStatusBadge(otherStatus)}</div>
                   </div>
+                  {match.friendEmailSent && (
+                    <div className="space-y-1 text-xs pt-2 mt-2 border-t">
+                      <p className="font-semibold text-muted-foreground">Friend Responses:</p>
+                      <div className="flex justify-between items-center">
+                        <span>{yourCard.friendName}:</span> {getStatusBadge(yourFriendStatus)}
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>{otherCard.friendName}:</span> {getStatusBadge(otherFriendStatus)}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter className="pt-4 border-t">
                   <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
