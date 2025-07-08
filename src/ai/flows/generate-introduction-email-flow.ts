@@ -22,12 +22,12 @@ const FriendProfileSchema = z.object({
   matcherName: z.string().describe("The name of the matchmaker who created this friend's profile."),
 });
 
-export const GenerateIntroductionEmailInputSchema = z.object({
+const GenerateIntroductionEmailInputSchema = z.object({
   potentialMatchId: z.string().describe("The ID of the PotentialMatch object."),
 });
 export type GenerateIntroductionEmailInput = z.infer<typeof GenerateIntroductionEmailInputSchema>;
 
-export const GenerateIntroductionEmailOutputSchema = z.object({
+const GenerateIntroductionEmailOutputSchema = z.object({
   subject: z.string().describe("A friendly and engaging subject line for the introductory email."),
   emailBody: z.string().describe("The personalized email body. Use placeholders like '[Friend's Name]' and '[Other Friend's Name]' which will be replaced."),
 });
