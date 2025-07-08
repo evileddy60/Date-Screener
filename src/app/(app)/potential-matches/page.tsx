@@ -19,8 +19,8 @@ import { cn } from '@/lib/utils';
 export default function PotentialMatchesPage() {
   const { currentUser, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [relevantMatches, setRelevantMatches] = useState<PotentialMatch[]>([]);
-  // Store ProfileCards in a map for quick lookup after fetching
+  const [activeMatches, setActiveMatches] = useState<PotentialMatch[]>([]);
+  const [rejectedMatches, setRejectedMatches] = useState<PotentialMatch[]>([]);
   const [profileCardMap, setProfileCardMap] = useState<Record<string, ProfileCard>>({});
   const [isLoadingData, setIsLoadingData] = useState(true);
 
@@ -36,9 +36,22 @@ export default function PotentialMatchesPage() {
         try {
           const userMatches = await getPotentialMatchesByMatcher(currentUser.id);
           userMatches.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setRelevantMatches(userMatches);
 
-          // Fetch all unique profile card IDs from these matches
+          const active: PotentialMatch[] = [];
+          const rejected: PotentialMatch[] = [];
+
+          for (const match of userMatches) {
+            const isRejected = match.statusMatcherA === 'rejected' || match.statusMatcherB === 'rejected' || match.statusFriendA === 'rejected' || match.statusFriendB === 'rejected';
+            if (isRejected) {
+              rejected.push(match);
+            } else {
+              active.push(match);
+            }
+          }
+
+          setActiveMatches(active);
+          setRejectedMatches(rejected);
+
           const profileCardIds = new Set<string>();
           userMatches.forEach(match => {
             profileCardIds.add(match.profileCardAId);
@@ -106,11 +119,11 @@ export default function PotentialMatchesPage() {
       <div className="text-center">
         <h1 className="font-headline text-4xl font-semibold text-primary">Review Potential Matches</h1>
         <p className="font-body text-lg text-foreground/80 mt-2">
-          Here are the system-suggested pairings involving your Profile Cards. Review and decide if they're a good fit!
+          Here are the system-suggested pairings involving your Profile Cards that require your attention.
         </p>
       </div>
 
-      {relevantMatches.length === 0 ? (
+      {activeMatches.length === 0 && rejectedMatches.length === 0 ? (
         <Card className="text-center py-12">
           <CardHeader>
              <div className="mx-auto bg-secondary p-4 rounded-full w-fit mb-4">
@@ -130,9 +143,17 @@ export default function PotentialMatchesPage() {
             </Button>
           </CardContent>
         </Card>
+      ) : activeMatches.length === 0 ? (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>No Active Matches</AlertTitle>
+          <AlertDescription>
+            You have no pending matches that require your attention right now. See archived matches below.
+          </AlertDescription>
+        </Alert>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {relevantMatches.map(match => {
+          {activeMatches.map(match => {
             const cardA = profileCardMap[match.profileCardAId];
             const cardB = profileCardMap[match.profileCardBId];
             
@@ -159,11 +180,8 @@ export default function PotentialMatchesPage() {
             const yourFriendStatus = yourCard.id === match.profileCardAId ? match.statusFriendA : match.statusFriendB;
             const otherFriendStatus = otherCard.id === match.profileCardAId ? match.statusFriendA : match.statusFriendB;
             
-            const isRejected = match.statusMatcherA === 'rejected' || match.statusMatcherB === 'rejected' || match.statusFriendA === 'rejected' || match.statusFriendB === 'rejected';
-
-
             return (
-              <Card key={match.id} className={cn("shadow-lg hover:shadow-primary/20 transition-all duration-300 flex flex-col", isRejected && "bg-muted/50")}>
+              <Card key={match.id} className="shadow-lg hover:shadow-primary/20 transition-all duration-300 flex flex-col">
                 <CardHeader className="pb-4">
                   <CardTitle className="font-headline text-xl text-primary text-center">
                     {yourCard.friendName} & {otherCard.friendName}
@@ -217,22 +235,47 @@ export default function PotentialMatchesPage() {
                   )}
                 </CardContent>
                 <CardFooter className="pt-4 border-t">
-                  {isRejected ? (
-                     <p className="text-sm font-semibold text-destructive text-center w-full flex items-center justify-center gap-1">
-                        <XCircle className="h-4 w-4" />
-                        This match was rejected by someone.
-                     </p>
-                  ) : (
-                    <Button asChild className="w-full">
-                        <Link href={`/potential-matches/${match.id}`}>
-                        View Details & Respond <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                    </Button>
-                  )}
+                  <Button asChild className="w-full">
+                      <Link href={`/potential-matches/${match.id}`}>
+                      View Details & Respond <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                  </Button>
                 </CardFooter>
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {rejectedMatches.length > 0 && (
+        <div className="mt-12">
+            <h2 className="font-headline text-2xl font-semibold text-foreground text-center mb-4">Rejected or Archived Matches</h2>
+            <Card className="max-w-xl mx-auto p-4 bg-muted/30">
+                <CardContent className="p-0 space-y-2">
+                    {rejectedMatches.map(match => {
+                        const cardA = profileCardMap[match.profileCardAId];
+                        const cardB = profileCardMap[match.profileCardBId];
+
+                        if (!cardA || !cardB) {
+                            return (
+                                <div key={match.id} className="flex items-center justify-between p-2 bg-card rounded-md shadow-sm">
+                                    <p className="text-sm text-muted-foreground italic">Invalid Archived Match</p>
+                                    <Badge variant="destructive"><AlertTriangle className="mr-1 h-3 w-3" />Error</Badge>
+                                </div>
+                            )
+                        }
+                        
+                        return (
+                            <div key={match.id} className="flex items-center justify-between p-2 bg-card rounded-md shadow-sm">
+                                <p className="text-sm text-muted-foreground">
+                                    <span className="font-medium text-foreground/80">{cardA.friendName}</span> & <span className="font-medium text-foreground/80">{cardB.friendName}</span>
+                                </p>
+                                <Badge variant="destructive"><XCircle className="mr-1 h-3 w-3"/>Rejected</Badge>
+                            </div>
+                        );
+                    })}
+                </CardContent>
+            </Card>
         </div>
       )}
     </div>
