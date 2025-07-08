@@ -9,7 +9,7 @@ import { UserCircle, BookUser, ShieldCheck, ArrowRight, Users, Bell, PartyPopper
 import { USER_ROLES } from '@/lib/constants';
 import { useEffect, useState } from 'react';
 import type { PotentialMatch, ProfileCard } from '@/types';
-import { getPotentialMatchesByMatcher, getProfileCardsByMatcher, getAllProfileCards } from '@/lib/firestoreService';
+import { getPotentialMatchesByMatcher, getAllProfileCards } from '@/lib/firestoreService';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -50,12 +50,23 @@ export default function DashboardPage() {
       if (currentUser && currentUser.role === USER_ROLES.RECOMMENDER) {
         setIsLoadingStats(true);
         try {
-          const myCards = await getProfileCardsByMatcher(currentUser.id);
-          setUserProfileCardsCount(myCards.length);
-
+          // Fetch all cards once to ensure data consistency
           const allCards = await getAllProfileCards();
-          setNetworkProfileCardsCount(allCards.length - myCards.length);
 
+          // Partition cards into "mine" and "network" client-side
+          const myCards: ProfileCard[] = [];
+          const networkCards: ProfileCard[] = [];
+          for (const card of allCards) {
+            if (card.createdByMatcherId === currentUser.id) {
+              myCards.push(card);
+            } else {
+              networkCards.push(card);
+            }
+          }
+          setUserProfileCardsCount(myCards.length);
+          setNetworkProfileCardsCount(networkCards.length);
+
+          // Fetch matches separately
           const matchesInvolvingUser = await getPotentialMatchesByMatcher(currentUser.id);
           setMatchSuggestionsCount(matchesInvolvingUser.length);
 
@@ -231,4 +242,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

@@ -69,7 +69,7 @@ export async function setUserProfile(userProfile: UserProfile): Promise<void> {
 // --- ProfileCard Functions ---
 
 export async function addProfileCard(
-  cardData: Omit<ProfileCard, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'>,
+  cardData: Omit<ProfileCard, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId' | 'matchStatus'>,
   matcherId: string,
   matcherName: string
 ): Promise<ProfileCard> {
@@ -82,20 +82,19 @@ export async function addProfileCard(
     throw new Error("Critical error: Matcher ID or Name not provided to addProfileCard function.");
   }
 
-  const docRef = await addDoc(collection(db, PROFILE_CARDS_COLLECTION), {
+  const newCardData = {
     ...cardData,
     createdByMatcherId: matcherId,
     matcherName: matcherName,
     createdAt: new Date().toISOString(),
-    matchStatus: 'available',
-  });
+    matchStatus: 'available' as const, // Explicitly set status on creation
+  };
+
+  const docRef = await addDoc(collection(db, PROFILE_CARDS_COLLECTION), newCardData);
+  
   return {
+    ...newCardData,
     id: docRef.id,
-    ...cardData,
-    createdByMatcherId: matcherId,
-    matcherName: matcherName,
-    createdAt: new Date().toISOString(),
-    matchStatus: 'available',
   };
 }
 
@@ -294,7 +293,7 @@ export async function clearProfileCardsCollection(): Promise<void> {
 
 export async function clearPotentialMatchesCollection(): Promise<void> {
   if (!db) { console.error("DB not available for clearPotentialMatchesCollection"); return; }
-  const querySnapshot = await getDocs(collection(db, POTENTIAL_MATCHES_COLlection));
+  const querySnapshot = await getDocs(collection(db, POTENTIAL_MATCHES_COLLECTION));
   const batch = writeBatch(db);
   querySnapshot.docs.forEach(doc => batch.delete(doc.ref));
   await batch.commit();
