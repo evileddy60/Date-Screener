@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -13,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { USER_ROLES } from '@/lib/constants';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 
 export default function PotentialMatchesPage() {
   const { currentUser, isLoading: authLoading } = useAuth();
@@ -149,10 +151,12 @@ export default function PotentialMatchesPage() {
             const otherStatus = getOtherMatcherStatus(match, currentUser.id);
             const yourFriendStatus = yourCard.id === match.profileCardAId ? match.statusFriendA : match.statusFriendB;
             const otherFriendStatus = otherCard.id === match.profileCardAId ? match.statusFriendA : match.statusFriendB;
+            
+            const isRejected = match.statusMatcherA === 'rejected' || match.statusMatcherB === 'rejected' || match.statusFriendA === 'rejected' || match.statusFriendB === 'rejected';
 
 
             return (
-              <Card key={match.id} className="shadow-lg hover:shadow-primary/20 transition-all duration-300 flex flex-col">
+              <Card key={match.id} className={cn("shadow-lg hover:shadow-primary/20 transition-all duration-300 flex flex-col", isRejected && "bg-muted/50")}>
                 <CardHeader className="pb-4">
                   <CardTitle className="font-headline text-xl text-primary text-center">
                     {yourCard.friendName} & {otherCard.friendName}
@@ -204,10 +208,18 @@ export default function PotentialMatchesPage() {
                       </div>
                     </div>
                   )}
+                  {isRejected && (
+                     <Alert variant="destructive" className="p-2 mt-2">
+                        <XCircle className="h-4 w-4" />
+                        <AlertDescription className="text-xs font-semibold">
+                            This match was rejected by someone.
+                        </AlertDescription>
+                    </Alert>
+                  )}
                 </CardContent>
                 <CardFooter className="pt-4 border-t">
-                  <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                    <Link href={`/potential-matches/${match.id}`}>
+                  <Button asChild className="w-full" disabled={isRejected}>
+                    <Link href={`/potential-matches/${match.id}`} className={cn(isRejected && "cursor-not-allowed")}>
                       View Details & Respond <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
