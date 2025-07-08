@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react'; 
@@ -170,7 +169,7 @@ export function UserProfileForm({ profile, onSubmit }: UserProfileFormProps) {
                       <div className="space-y-0.5">
                         <FormLabel className="font-body text-sm flex items-center gap-1"><Mail className="w-4 h-4 text-primary"/> Email for New Match Suggestions</FormLabel>
                         <FormDescription className="font-body text-xs">
-                          Receive an email when the AI suggests a new potential match involving one of your cards.
+                          Receive an email when the system suggests a new potential match involving one of your cards.
                         </FormDescription>
                       </div>
                       <FormControl>

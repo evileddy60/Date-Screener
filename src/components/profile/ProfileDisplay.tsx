@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { UserProfile, PrivacySettingsData } from '@/types';
@@ -88,7 +87,7 @@ export function ProfileDisplay({ profile }: ProfileDisplayProps) {
             <Mail className="w-5 h-5 text-primary shrink-0" />
             <div>
               <span className="font-semibold">New Match Suggestion Emails:</span> {privacy.emailNotificationsForNewMatches ? 'Enabled' : 'Disabled'}
-               <p className="text-xs text-muted-foreground">Notifications for AI-suggested matches involving your cards.</p>
+               <p className="text-xs text-muted-foreground">Notifications for system-suggested matches involving your cards.</p>
             </div>
           </div>
           <div className="flex items-center gap-2 p-2 rounded-md bg-secondary/20">
