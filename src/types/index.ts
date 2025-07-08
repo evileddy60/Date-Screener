@@ -51,7 +51,7 @@ export interface ProfileCard { // Profile of a single friend, created by a Match
   friendAge?: number; // Actual age of the friend
   friendGender?: typeof FRIEND_GENDER_OPTIONS[number]; // Friend's own gender
   friendPostalCode?: string; // Friend's Canadian Postal Code (e.g., "A1A1A1" or "A1A 1A1")
-  educationLevel?: typeof EDUCATION_LEVEL_OPTIONS[number];
+  educationLevel?: typeof EDUCATION_LEVEL_OPTIONS[number] | '';
   occupation?: string; // Added (e.g., "Software Engineer", "Teacher")
   bio: string;
   interests: string[];
