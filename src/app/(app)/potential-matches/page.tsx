@@ -208,21 +208,20 @@ export default function PotentialMatchesPage() {
                       </div>
                     </div>
                   )}
-                  {isRejected && (
-                     <Alert variant="destructive" className="p-2 mt-2">
-                        <XCircle className="h-4 w-4" />
-                        <AlertDescription className="text-xs font-semibold">
-                            This match was rejected by someone.
-                        </AlertDescription>
-                    </Alert>
-                  )}
                 </CardContent>
                 <CardFooter className="pt-4 border-t">
-                  <Button asChild className="w-full" disabled={isRejected}>
-                    <Link href={`/potential-matches/${match.id}`} className={cn(isRejected && "cursor-not-allowed")}>
-                      View Details & Respond <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
+                  {isRejected ? (
+                     <p className="text-sm font-semibold text-destructive text-center w-full flex items-center justify-center gap-1">
+                        <XCircle className="h-4 w-4" />
+                        This match was rejected by someone.
+                     </p>
+                  ) : (
+                    <Button asChild className="w-full">
+                        <Link href={`/potential-matches/${match.id}`}>
+                        View Details & Respond <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             );
