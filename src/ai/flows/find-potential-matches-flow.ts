@@ -85,6 +85,8 @@ const prompt = ai.definePrompt({
 
   For each potential match, assign a compatibility score out of 100 and explain your reasoning in 2-3 sentences. Present the matches as a ranked list from most to least compatible.
 
+  Critically evaluate each candidate against the target profile. A high compatibility score requires strong alignment across multiple criteria, especially age and gender preferences. Do not suggest a match if these core preferences are not reasonably met. Be discerning and selective.
+
   Target Profile Card:
   ID: {{{targetCard.id}}}
   Name: {{{targetCard.friendName}}}
