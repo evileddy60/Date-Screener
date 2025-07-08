@@ -138,9 +138,16 @@ export default function PotentialMatchesPage() {
             
             if (!cardA || !cardB) {
               return (
-                <Card key={match.id} className="border-destructive">
-                  <CardHeader><CardTitle>Error Loading Match</CardTitle></CardHeader>
-                  <CardContent>Could not load full details for match ID: {match.id}. Referenced profile card(s) missing.</CardContent>
+                <Card key={match.id} className="border-destructive bg-destructive/5 flex flex-col">
+                  <CardHeader>
+                    <CardTitle className="font-headline text-destructive flex items-center gap-2"><AlertTriangle className="w-5 h-5"/>Match Invalid</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                    <p className="font-body text-sm text-destructive-foreground">This potential match can no longer be displayed because one of the associated profile cards has been deleted.</p>
+                  </CardContent>
+                  <CardFooter>
+                    <p className="text-xs text-muted-foreground">Match ID: {match.id}</p>
+                  </CardFooter>
                 </Card>
               );
             }
