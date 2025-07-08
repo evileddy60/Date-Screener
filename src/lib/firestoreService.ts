@@ -12,7 +12,8 @@ import {
   Timestamp,
   deleteDoc,
   writeBatch,
-  setDoc
+  setDoc,
+  runTransaction
 } from 'firebase/firestore';
 import type { ProfileCard, PotentialMatch, UserProfile } from '@/types';
 
@@ -88,6 +89,7 @@ export async function addProfileCard(
     matcherName: matcherName,
     createdAt: new Date().toISOString(),
     matchStatus: 'available' as const, // Explicitly set status on creation
+    matchAttempts: 0,
   };
 
   const docRef = await addDoc(collection(db, PROFILE_CARDS_COLLECTION), newCardData);
@@ -164,11 +166,43 @@ export async function addPotentialMatch(
     console.error("Firestore DB instance is not available for addPotentialMatch.");
     throw new Error("Database service unavailable. Cannot create potential match.");
   }
-  const docRef = await addDoc(collection(db, POTENTIAL_MATCHES_COLLECTION), {
-    ...matchData,
-    createdAt: new Date().toISOString(),
-  });
-  return { id: docRef.id, ...matchData, createdAt: new Date().toISOString() };
+
+  const newMatchRef = doc(collection(db, POTENTIAL_MATCHES_COLLECTION));
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const cardARef = doc(db, PROFILE_CARDS_COLLECTION, matchData.profileCardAId);
+      const cardBRef = doc(db, PROFILE_CARDS_COLLECTION, matchData.profileCardBId);
+
+      const cardASnap = await transaction.get(cardARef);
+      const cardBSnap = await transaction.get(cardBRef);
+
+      if (!cardASnap.exists() || !cardBSnap.exists()) {
+        throw "One or both profile cards in the potential match do not exist.";
+      }
+      
+      const cardAData = cardASnap.data() as ProfileCard;
+      const cardBData = cardBSnap.data() as ProfileCard;
+
+      // 1. Set the new PotentialMatch document
+      transaction.set(newMatchRef, {
+        ...matchData,
+        createdAt: new Date().toISOString(),
+      });
+
+      // 2. Update matchAttempts on ProfileCardA
+      transaction.update(cardARef, { matchAttempts: (cardAData.matchAttempts || 0) + 1 });
+
+      // 3. Update matchAttempts on ProfileCardB
+      transaction.update(cardBRef, { matchAttempts: (cardBData.matchAttempts || 0) + 1 });
+    });
+
+    return { id: newMatchRef.id, ...matchData, createdAt: new Date().toISOString() };
+
+  } catch (e) {
+    console.error("Transaction failed in addPotentialMatch: ", e);
+    throw e; // re-throw the error after logging
+  }
 }
 
 export async function updatePotentialMatch(matchData: PotentialMatch): Promise<void> {

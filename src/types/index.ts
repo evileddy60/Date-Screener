@@ -63,6 +63,7 @@ export interface ProfileCard { // Profile of a single friend, created by a Match
     location?: string; // e.g., "within 50 km" - This is relative to friendPostalCode
   };
   matchStatus?: 'available' | 'matched';
+  matchAttempts?: number;
   createdAt: string; // ISO date string
 }
 
@@ -96,4 +97,3 @@ export interface MatchFeedback {
     
 
     
-

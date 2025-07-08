@@ -90,6 +90,11 @@ export function ProfileCardDisplay({ profileCard, onEdit, onFindMatch, onDeleteR
                     <CheckCircle className="mr-1 h-3 w-3" /> Matched
                 </Badge>
             )}
+            {profileCard.matchAttempts !== undefined && profileCard.matchAttempts > 0 && (
+                <Badge variant="secondary" title={`This card has been in ${profileCard.matchAttempts} potential match suggestion${profileCard.matchAttempts === 1 ? '' : 's'}.`}>
+                    <UsersIcon className="mr-1 h-3 w-3" /> Attempts: {profileCard.matchAttempts}
+                </Badge>
+            )}
             {profileCard.interests.slice(0, 3).map(interest => (
                  <Badge key={interest} variant="secondary" className="font-body text-xs bg-accent/70 text-accent-foreground capitalize">{interest}</Badge>
             ))}
