@@ -78,7 +78,7 @@ function ManageProfileCardContent() {
         friendAge: formData.friendAge,
         friendGender: formData.friendGender,
         friendPostalCode: formData.friendPostalCode,
-        educationLevel: formData.educationLevel === '' ? undefined : formData.educationLevel,
+        educationLevel: formData.educationLevel,
         occupation: formData.occupation,
         bio: formData.bio,
         interests: formData.interests, 
