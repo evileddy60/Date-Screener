@@ -221,13 +221,8 @@ const findPotentialMatchesFlow = ai.defineFlow(
       
       const existingMatch = await findExistingPotentialMatch(targetCardFull.id, matchedCardFull.id);
       if (existingMatch) {
-        const isRejectedByMatchers = existingMatch.statusMatcherA === 'rejected' || existingMatch.statusMatcherB === 'rejected';
-        const isRejectedByFriends = existingMatch.statusFriendA === 'rejected' || existingMatch.statusFriendB === 'rejected';
-
-        if (!isRejectedByMatchers && !isRejectedByFriends) {
-            console.log(`An active or pending potential match already exists between ${targetCardFull.id} and ${matchedCardFull.id}. Skipping.`);
-            continue;
-        }
+        console.log(`A potential match document already exists between ${targetCardFull.id} and ${matchedCardFull.id}. Skipping creation of a new one.`);
+        continue;
       }
 
       const newPotentialMatchData: Omit<PotentialMatch, 'id' | 'createdAt'> = {
