@@ -112,13 +112,17 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
 
     if (initialData && mode === 'edit') {
       
+      const normalizedEducationLevel = EDUCATION_LEVEL_OPTIONS.find(
+        (level) => level.toLowerCase() === (initialData.educationLevel?.toLowerCase() || "")
+      ) || undefined;
+
       newDefaultValues = {
         friendName: initialData.friendName || '',
         friendEmail: initialData.friendEmail || '',
         friendAge: initialData.friendAge || MIN_AGE,
         friendGender: initialData.friendGender || undefined,
         friendPostalCode: initialData.friendPostalCode || '',
-        educationLevel: initialData.educationLevel,
+        educationLevel: normalizedEducationLevel,
         occupation: initialData.occupation || '',
         bio: initialData.bio || '',
         interests: Array.isArray(initialData.interests) ? initialData.interests.join(', ') : (initialData.interests || ''),
@@ -384,34 +388,24 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 <FormField
                     control={form.control}
                     name="educationLevel"
-                    render={({ field }) => {
-                        const normalizedSelectValue = useMemo(() => {
-                            if (!field.value) return undefined;
-                            const matchingLevel = EDUCATION_LEVEL_OPTIONS.find(
-                                (level) => level.toLowerCase() === field.value.toLowerCase()
-                            );
-                            return matchingLevel;
-                        }, [field.value]);
-
-                        return (
-                            <FormItem>
-                                <FormLabel className="font-body flex items-center gap-1"><GraduationCap className="w-4 h-4 text-primary" />Friend's Highest Education Level (Optional)</FormLabel>
-                                <Select onValueChange={field.onChange} value={normalizedSelectValue ?? ''}>
-                                    <FormControl>
-                                        <SelectTrigger className="font-body bg-card">
-                                            <SelectValue placeholder="-- Select Education Level --" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {memoizedEducationLevelOptions.map(option => (
-                                            <SelectItem key={option} value={option}>{option}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        );
-                    }}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="font-body flex items-center gap-1"><GraduationCap className="w-4 h-4 text-primary" />Friend's Highest Education Level (Optional)</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                <FormControl>
+                                    <SelectTrigger className="font-body bg-card">
+                                        <SelectValue placeholder="-- Select Education Level --" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {memoizedEducationLevelOptions.map(option => (
+                                        <SelectItem key={option} value={option}>{option}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
                 />
 
 
