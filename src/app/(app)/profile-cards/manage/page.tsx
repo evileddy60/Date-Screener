@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { addProfileCard, getProfileCardById, updateProfileCard } from '@/lib/firestoreService';
 import type { ProfileCard } from '@/types';
+import { EDUCATION_LEVEL_OPTIONS } from '@/types';
 import { ProfileCardForm, type ProfileCardFormData } from '@/components/profile-cards/ProfileCardForm';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertTriangle } from 'lucide-react';
@@ -72,13 +73,19 @@ function ManageProfileCardContent() {
     setIsSubmitting(true);
     setError(null);
 
+    // Final normalization step before saving to ensure data integrity.
+    const normalizedEducationLevel = EDUCATION_LEVEL_OPTIONS.find(
+        (level) => level.toLowerCase() === (formData.educationLevel?.toLowerCase() || "")
+    ) || undefined;
+
+
     const dataToSave: Omit<ProfileCard, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'> = {
         friendName: formData.friendName,
         friendEmail: formData.friendEmail,
         friendAge: formData.friendAge,
         friendGender: formData.friendGender,
         friendPostalCode: formData.friendPostalCode,
-        educationLevel: formData.educationLevel,
+        educationLevel: normalizedEducationLevel,
         occupation: formData.occupation,
         bio: formData.bio,
         interests: formData.interests, 
