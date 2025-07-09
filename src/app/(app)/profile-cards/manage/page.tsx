@@ -73,32 +73,31 @@ function ManageProfileCardContent() {
     setIsSubmitting(true);
     setError(null);
 
-    // Final normalization step before saving to ensure data integrity.
-    const normalizedEducationLevel = EDUCATION_LEVEL_OPTIONS.find(
-        (level) => level.toLowerCase() === (formData.educationLevel?.toLowerCase() || "")
-    ) || undefined;
-
-
-    const dataToSave: Omit<ProfileCard, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'> = {
-        friendName: formData.friendName,
-        friendEmail: formData.friendEmail,
-        friendAge: formData.friendAge,
-        friendGender: formData.friendGender,
-        friendPostalCode: formData.friendPostalCode,
-        educationLevel: normalizedEducationLevel,
-        occupation: formData.occupation,
-        bio: formData.bio,
-        interests: formData.interests, 
-        photoUrl: formData.photoUrl,
-        preferences: {
-            ageRange: formData.preferences?.ageRange,
-            seeking: formData.preferences?.seeking, 
-            gender: formData.preferences?.gender,
-            location: formData.preferences?.location,
-        },
-    };
-
     try {
+      // Final normalization step before saving to ensure data integrity.
+      const normalizedEducationLevel = EDUCATION_LEVEL_OPTIONS.find(
+          (level) => level.toLowerCase() === (formData.educationLevel?.toLowerCase() || "")
+      ) || undefined;
+
+      const dataToSave: Omit<ProfileCard, 'id' | 'createdAt' | 'matcherName' | 'createdByMatcherId'> = {
+          friendName: formData.friendName,
+          friendEmail: formData.friendEmail,
+          friendAge: formData.friendAge,
+          friendGender: formData.friendGender,
+          friendPostalCode: formData.friendPostalCode,
+          educationLevel: normalizedEducationLevel,
+          occupation: formData.occupation,
+          bio: formData.bio,
+          interests: formData.interests, 
+          photoUrl: formData.photoUrl,
+          preferences: {
+              ageRange: formData.preferences?.ageRange,
+              seeking: formData.preferences?.seeking, 
+              gender: formData.preferences?.gender,
+              location: formData.preferences?.location,
+          },
+      };
+
       if (mode === 'edit' && initialCardData) {
         const cardToUpdate: ProfileCard = {
           ...dataToSave,
@@ -108,24 +107,21 @@ function ManageProfileCardContent() {
           createdAt: initialCardData.createdAt,
         };
         await updateProfileCard(cardToUpdate);
-        setIsSubmitting(false); 
         toast({ title: 'Profile Card Updated!', description: `${cardToUpdate.friendName}'s profile has been successfully updated.` });
-        router.push('/profile-cards');
       } else { 
         await addProfileCard(dataToSave, currentUser.id, currentUser.name);
-        setIsSubmitting(false); 
         toast({ title: 'Profile Card Created!', description: `${formData.friendName}'s profile has been successfully created.` });
-        router.push('/profile-cards');
       }
+
+      // On success, navigate away. The component will unmount, so no need to reset state.
+      router.push('/profile-cards');
+
     } catch (err: any) {
       console.error('Error saving profile card:', err);
       setError(err.message || 'Could not save profile card.');
-      setIsSubmitting(false); 
       toast({ variant: 'destructive', title: 'Save Failed', description: err.message || 'An unexpected error occurred.' });
-    } finally {
-      if (isSubmitting) { 
-        setIsSubmitting(false);
-      }
+      // On failure, we stay on the page, so we must reset the loading state.
+      setIsSubmitting(false);
     }
   };
 

@@ -43,7 +43,7 @@ export const profileCardFormSchema = z.object({
     .regex(canadianPostalCodeRegex, "Invalid Canadian Postal Code format (e.g., A1A 1A1 or M5V2T6).")
     .transform(val => val.toUpperCase().replace(/[ -]/g, ''))
     .optional().or(z.literal('')),
-  educationLevel: z.enum(EDUCATION_LEVEL_OPTIONS).optional().or(z.literal(undefined)),
+  educationLevel: z.enum(EDUCATION_LEVEL_OPTIONS).optional(),
   occupation: z.string().max(100, "Occupation cannot exceed 100 characters.").optional().or(z.literal('')),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
@@ -108,13 +108,15 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
   const { reset, setValue, watch, setError: setFormError, clearErrors: clearFormErrors } = form;
 
   useEffect(() => {
-    let newDefaultValues: ProfileCardFormData;
+    let newDefaultValues: Partial<ProfileCardFormData>;
 
     if (initialData && mode === 'edit') {
       
       const normalizedEducationLevel = EDUCATION_LEVEL_OPTIONS.find(
         (level) => level.toLowerCase() === (initialData.educationLevel?.toLowerCase() || "")
       ) || undefined;
+      
+      console.log("Initial data from DB:", initialData.educationLevel, "Normalized to:", normalizedEducationLevel);
 
       newDefaultValues = {
         friendName: initialData.friendName || '',
@@ -135,12 +137,12 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         },
       };
       
-      setCurrentFriendAge(newDefaultValues.friendAge);
+      setCurrentFriendAge(newDefaultValues.friendAge || MIN_AGE);
       setImagePreview(initialData.photoUrl || null);
       setSelectedImageFile(null);
       setFileName(null);
 
-      const ageRangePref = newDefaultValues.preferences.ageRange;
+      const ageRangePref = newDefaultValues.preferences?.ageRange;
       let parsedMinAgeSlider = MIN_AGE;
       let parsedMaxAgeSlider = MIN_AGE + 10;
       if (typeof ageRangePref === 'string' && /^\d{1,2}-\d{1,2}$/.test(ageRangePref)) {
@@ -154,7 +156,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
       }
       setCurrentAgeRange([parsedMinAgeSlider, parsedMaxAgeSlider]);
 
-      const locationPref = newDefaultValues.preferences.location;
+      const locationPref = newDefaultValues.preferences?.location;
       let parsedProximitySlider = 50;
       if (typeof locationPref === 'string' && /^\d+ km$/.test(locationPref)) {
         const prox = parseInt(locationPref.replace(' km', ''), 10);
@@ -240,48 +242,48 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     }
     setIsUploadingImage(true);
 
-    let finalPhotoUrl = initialData?.photoUrl || '';
+    try {
+      let finalPhotoUrl = initialData?.photoUrl || '';
 
-    if (selectedImageFile) {
-        try {
-            if (mode === 'edit' && initialData?.photoUrl && initialData.photoUrl.includes('firebasestorage.googleapis.com')) {
-                try {
-                    const oldImageRef = storageRef(storage, initialData.photoUrl);
-                    await deleteObject(oldImageRef);
-                } catch (deleteError: any) {
-                    console.warn("Could not delete old image from Firebase Storage:", deleteError);
-                }
-            }
-            
-            const filePath = `profileCardImages/${currentUser.id}/${Date.now()}_${selectedImageFile.name}`;
-            const imageStorageRef = storageRef(storage, filePath);
-            const uploadTask = await uploadBytesResumable(imageStorageRef, selectedImageFile);
-            finalPhotoUrl = await getDownloadURL(uploadTask.ref);
-        } catch (uploadError: any) {
-            console.error('Error uploading image to Firebase Storage:', uploadError);
-            toast({ variant: 'destructive', title: 'Image Upload Failed', description: uploadError.message || 'Could not upload the image.' });
-            setIsUploadingImage(false);
-            return;
-        }
-    } else if (formData.photoUrl === '' && initialData?.photoUrl && initialData.photoUrl.includes('firebasestorage.googleapis.com')) {
-        finalPhotoUrl = '';
-        if (mode === 'edit') { 
-            try {
-                const oldImageRef = storageRef(storage, initialData.photoUrl);
-                await deleteObject(oldImageRef);
-            } catch (deleteError: any) {
-                console.warn("Could not delete old image from Firebase Storage during removal:", deleteError);
-            }
-        }
+      if (selectedImageFile) {
+          if (mode === 'edit' && initialData?.photoUrl && initialData.photoUrl.includes('firebasestorage.googleapis.com')) {
+              try {
+                  const oldImageRef = storageRef(storage, initialData.photoUrl);
+                  await deleteObject(oldImageRef);
+              } catch (deleteError: any) {
+                  console.warn("Could not delete old image from Firebase Storage:", deleteError);
+              }
+          }
+          
+          const filePath = `profileCardImages/${currentUser.id}/${Date.now()}_${selectedImageFile.name}`;
+          const imageStorageRef = storageRef(storage, filePath);
+          const uploadTask = await uploadBytesResumable(imageStorageRef, selectedImageFile);
+          finalPhotoUrl = await getDownloadURL(uploadTask.ref);
+      } else if (formData.photoUrl === '' && initialData?.photoUrl && initialData.photoUrl.includes('firebasestorage.googleapis.com')) {
+          finalPhotoUrl = '';
+          if (mode === 'edit') { 
+              try {
+                  const oldImageRef = storageRef(storage, initialData.photoUrl);
+                  await deleteObject(oldImageRef);
+              } catch (deleteError: any) {
+                  console.warn("Could not delete old image from Firebase Storage during removal:", deleteError);
+              }
+          }
+      }
+      
+      const dataToSubmit: ProfileCardFormData = {
+          ...formData,
+          photoUrl: finalPhotoUrl,
+      };
+      
+      await onSubmit(dataToSubmit);
+    } catch (error) {
+        // The parent component handles the error and toast notification.
+        // The finally block will ensure the loading state is reset.
+        console.error("Submission process failed:", error);
+    } finally {
+        setIsUploadingImage(false);
     }
-    
-    const dataToSubmit: ProfileCardFormData = {
-        ...formData,
-        photoUrl: finalPhotoUrl,
-    };
-    
-    await onSubmit(dataToSubmit);
-    setIsUploadingImage(false);
   };
 
   const combinedIsSubmitting = parentIsSubmitting || isUploadingImage;
