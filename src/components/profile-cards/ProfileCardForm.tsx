@@ -43,7 +43,7 @@ export const profileCardFormSchema = z.object({
     .regex(canadianPostalCodeRegex, "Invalid Canadian Postal Code format (e.g., A1A 1A1 or M5V2T6).")
     .transform(val => val.toUpperCase().replace(/[ -]/g, ''))
     .optional().or(z.literal('')),
-  educationLevel: z.enum(EDUCATION_LEVEL_OPTIONS).optional(),
+  educationLevel: z.enum(EDUCATION_LEVEL_OPTIONS).optional().or(z.literal(undefined)),
   occupation: z.string().max(100, "Occupation cannot exceed 100 characters.").optional().or(z.literal('')),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
@@ -386,7 +386,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel className="font-body flex items-center gap-1"><GraduationCap className="w-4 h-4 text-primary" />Friend's Highest Education Level (Optional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value ?? ''}>
                             <FormControl>
                             <SelectTrigger className="font-body bg-card">
                                 <SelectValue placeholder="-- Select Education Level --" />
@@ -529,6 +529,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                                             (value) => value !== option
                                             )
                                         );
+
                                     }}
                                     disabled={combinedIsSubmitting}
                                 />
