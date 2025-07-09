@@ -43,7 +43,7 @@ export const profileCardFormSchema = z.object({
     .regex(canadianPostalCodeRegex, "Invalid Canadian Postal Code format (e.g., A1A 1A1 or M5V2T6).")
     .transform(val => val.toUpperCase().replace(/[ -]/g, ''))
     .optional().or(z.literal('')),
-  educationLevel: z.enum(EDUCATION_LEVEL_OPTIONS).optional(),
+  educationLevel: z.enum(EDUCATION_LEVEL_OPTIONS).optional().or(z.literal(undefined)),
   occupation: z.string().max(100, "Occupation cannot exceed 100 characters.").optional().or(z.literal('')),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
@@ -112,26 +112,13 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
 
     if (initialData && mode === 'edit') {
       
-      let educationLevelToSet: typeof EDUCATION_LEVEL_OPTIONS[number] | undefined = undefined;
-      if (initialData.educationLevel) {
-        // Find a case-insensitive match from our canonical list
-        const matchingLevel = EDUCATION_LEVEL_OPTIONS.find(
-          (level) => level.toLowerCase() === initialData.educationLevel!.toLowerCase()
-        );
-        if (matchingLevel) {
-          educationLevelToSet = matchingLevel;
-        } else {
-           console.warn(`Invalid education level "${initialData.educationLevel}" from DB will be ignored.`);
-        }
-      }
-
       newDefaultValues = {
         friendName: initialData.friendName || '',
         friendEmail: initialData.friendEmail || '',
         friendAge: initialData.friendAge || MIN_AGE,
         friendGender: initialData.friendGender || undefined,
         friendPostalCode: initialData.friendPostalCode || '',
-        educationLevel: educationLevelToSet,
+        educationLevel: initialData.educationLevel,
         occupation: initialData.occupation || '',
         bio: initialData.bio || '',
         interests: Array.isArray(initialData.interests) ? initialData.interests.join(', ') : (initialData.interests || ''),
@@ -397,25 +384,36 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
                 <FormField
                     control={form.control}
                     name="educationLevel"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="font-body flex items-center gap-1"><GraduationCap className="w-4 h-4 text-primary" />Friend's Highest Education Level (Optional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                            <FormControl>
-                            <SelectTrigger className="font-body bg-card">
-                                <SelectValue placeholder="-- Select Education Level --" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {memoizedEducationLevelOptions.map(option => (
-                                <SelectItem key={option} value={option}>{option}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
+                    render={({ field }) => {
+                        const normalizedSelectValue = useMemo(() => {
+                            if (!field.value) return undefined;
+                            const matchingLevel = EDUCATION_LEVEL_OPTIONS.find(
+                                (level) => level.toLowerCase() === field.value.toLowerCase()
+                            );
+                            return matchingLevel;
+                        }, [field.value]);
+
+                        return (
+                            <FormItem>
+                                <FormLabel className="font-body flex items-center gap-1"><GraduationCap className="w-4 h-4 text-primary" />Friend's Highest Education Level (Optional)</FormLabel>
+                                <Select onValueChange={field.onChange} value={normalizedSelectValue ?? ''}>
+                                    <FormControl>
+                                        <SelectTrigger className="font-body bg-card">
+                                            <SelectValue placeholder="-- Select Education Level --" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {memoizedEducationLevelOptions.map(option => (
+                                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        );
+                    }}
                 />
+
 
                 <FormField
                     control={form.control}
