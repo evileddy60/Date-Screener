@@ -43,7 +43,7 @@ export const profileCardFormSchema = z.object({
     .regex(canadianPostalCodeRegex, "Invalid Canadian Postal Code format (e.g., A1A 1A1 or M5V2T6).")
     .transform(val => val.toUpperCase().replace(/[ -]/g, ''))
     .optional().or(z.literal('')),
-  educationLevel: z.enum(EDUCATION_LEVEL_OPTIONS).optional(),
+  educationLevel: z.enum(EDUCATION_LEVEL_OPTIONS).optional().or(z.literal(undefined)),
   occupation: z.string().max(100, "Occupation cannot exceed 100 characters.").optional().or(z.literal('')),
   bio: z.string().min(30, "Bio must be at least 30 characters.").max(1000, "Bio cannot exceed 1000 characters."),
   interests: z.string().min(1, "Please list at least one interest.").transform(val => val ? val.split(',').map(s => s.trim()).filter(Boolean) : []),
@@ -111,14 +111,22 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
     let newDefaultValues: ProfileCardFormData;
 
     if (initialData && mode === 'edit') {
-      console.log('Initial Education Level from initialData:', initialData.educationLevel);
-
-      const validEducationLevel = EDUCATION_LEVEL_OPTIONS.includes(initialData.educationLevel as any) 
-        ? initialData.educationLevel 
-        : undefined;
       
-      if (initialData.educationLevel && !validEducationLevel) {
-          console.warn(`Invalid education level "${initialData.educationLevel}" provided. Resetting to empty.`);
+      console.log('Initial Education Level from DB:', initialData.educationLevel);
+      let educationLevelToSet: typeof EDUCATION_LEVEL_OPTIONS[number] | undefined = undefined;
+      if (initialData.educationLevel) {
+        // Find a case-insensitive match
+        const matchingLevel = EDUCATION_LEVEL_OPTIONS.find(
+          (level) => level.toLowerCase() === initialData.educationLevel!.toLowerCase()
+        );
+        if (matchingLevel) {
+          educationLevelToSet = matchingLevel;
+           if (matchingLevel !== initialData.educationLevel) {
+            console.log(`Normalized education level from "${initialData.educationLevel}" to "${matchingLevel}".`);
+          }
+        } else {
+           console.warn(`Invalid education level "${initialData.educationLevel}" provided. Ignoring.`);
+        }
       }
 
       newDefaultValues = {
@@ -127,7 +135,7 @@ export function ProfileCardForm({ initialData, onSubmit, onCancel, mode, isSubmi
         friendAge: initialData.friendAge || MIN_AGE,
         friendGender: initialData.friendGender || undefined,
         friendPostalCode: initialData.friendPostalCode || '',
-        educationLevel: validEducationLevel,
+        educationLevel: educationLevelToSet,
         occupation: initialData.occupation || '',
         bio: initialData.bio || '',
         interests: Array.isArray(initialData.interests) ? initialData.interests.join(', ') : (initialData.interests || ''),
